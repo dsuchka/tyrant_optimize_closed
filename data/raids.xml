@@ -385,6 +385,33 @@
 		</deck>
 	</raid>
 
+	<raid>
+		<id>18</id>
+		<name>Gilians Raid</name>
+		<commander>25054</commander>
+		<levels>16</levels>
+		<deck>
+			<always_include>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38348</card>
+				<card>38358</card>
+				<card>38358</card>
+				<card>38358</card>
+				<card>38368</card>
+				<card>38368</card>
+				<card>38368</card>
+				<card>38378</card>
+				<card>38378</card>
+				<card>38378</card>
+			</always_include>
+		</deck>
+	</raid>
+
 <!-- END of Raids -->
 
 

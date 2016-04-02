@@ -361,7 +361,7 @@ void resolve_skill(Field* fd)
             continue;
         }
         signed evolved_offset = status->m_evolved_skill_offset[ss.id];
-        auto& evolved_s = status->m_evolved_skill_offset[ss.id] != 0 ? apply_evolve(ss, evolved_offset) : ss;
+        auto& evolved_s = evolved_offset != 0 ? apply_evolve(ss, evolved_offset) : ss;
         unsigned enhanced_value = status->enhanced(evolved_s.id);
         auto& enhanced_s = enhanced_value > 0 ? apply_enhance(evolved_s, enhanced_value) : evolved_s;
         auto& modified_s = enhanced_s;
@@ -370,11 +370,18 @@ void resolve_skill(Field* fd)
 }
 //------------------------------------------------------------------------------
 inline bool has_attacked(CardStatus* c) { return(c->m_step == CardStep::attacked); }
-inline bool can_act(CardStatus* c) { return(c->m_hp > 0 && !c->m_jammed); }
+inline bool is_alive(CardStatus* c) { return(c->m_hp > 0); }
+inline bool can_act(CardStatus* c) { return(is_alive(c) && !c->m_jammed); }
 inline bool is_active(CardStatus* c) { return(can_act(c) && c->m_delay == 0); }
 inline bool is_active_next_turn(CardStatus* c) { return(can_act(c) && c->m_delay <= 1); }
 // Can be healed / repaired
 inline bool can_be_healed(CardStatus* c) { return(c->m_hp > 0 && c->m_hp < c->m_max_hp); }
+// Strange Transmission [Gilians] features
+inline bool is_gilian(CardStatus* c) { return(
+        (c->m_card->m_id >= 25054 && c->m_card->m_id <= 25063) // Gilian Commander
+    ||  (c->m_card->m_id >= 38348 && c->m_card->m_id <= 38388) // Gilian assaults plus the Gil's Shard
+); }
+inline bool is_alive_gilian(CardStatus* c) { return(is_alive(c) && is_gilian(c)); }
 //------------------------------------------------------------------------------
 bool attack_phase(Field* fd);
 template<Skill skill_id>
@@ -1124,7 +1131,16 @@ inline bool skill_predicate(Field* fd, CardStatus* src, CardStatus* dst, const S
 template<>
 inline bool skill_predicate<enhance>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
-    return dst->has_skill(s.s) && (!(BEGIN_ACTIVATION < s.s && s.s < END_ACTIVATION) || is_active(dst));
+    return dst->has_skill(s.s) && (
+        (!(BEGIN_ACTIVATION < s.s && s.s < END_ACTIVATION) || is_active(dst))
+
+        /* Strange Transmission [Gilians]: strange gillian's behavior implementation:
+         * The Gillian commander and assaults can enhance any skills on any assaults
+         * regardless of jammed/delayed states. But what kind of behavior is in the case
+         * when gilians are played among standard assaults, I don't know. :)
+         */
+        || (is_alive_gilian(src) && is_alive(dst))
+    );
 }
 
 /*
@@ -1134,7 +1150,16 @@ inline bool skill_predicate<enhance>(Field* fd, CardStatus* src, CardStatus* dst
 template<>
 inline bool skill_predicate<evolve>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
-    return dst->has_skill(s.s) && !dst->has_skill(s.s2) && (!(BEGIN_ACTIVATION < s.s2 && s.s2 < END_ACTIVATION) || is_active(dst));
+    return dst->has_skill(s.s) && (
+        (!dst->has_skill(s.s2) && (!(BEGIN_ACTIVATION < s.s2 && s.s2 < END_ACTIVATION) || is_active(dst)))
+
+        /* Strange Transmission [Gilians]: strange gillian's behavior implementation:
+         * The Gillian commander and assaults can evolve any skills on any assaults
+         * regardless of jammed/delayed states. But what kind of behavior is in the case
+         * when gilians are played among standard assaults, I don't know. :)
+         */
+        || (is_alive_gilian(src) && is_alive(dst))
+    );
 }
 
 template<>
