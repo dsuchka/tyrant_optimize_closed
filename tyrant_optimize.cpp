@@ -1378,6 +1378,11 @@ int main(int argc, char** argv)
             gamemode = surge;
             optimization_mode = OptimizationMode::campaign;
         }
+	else if (strcmp(argv[argIndex], "campaign-nosurge") == 0)
+	{
+	    gamemode = fight;
+            optimization_mode = OptimizationMode::campaign;
+	}
         else if (strcmp(argv[argIndex], "pvp") == 0)
         {
             gamemode = fight;
