@@ -28,11 +28,7 @@ struct Results
     result_type wins;
     result_type draws;
     result_type losses;
-#ifdef TUO_MODE_OPEN_THE_DECK
-    double points;
-#else
     result_type points;
-#endif
     template<typename other_result_type>
     Results& operator+=(const Results<other_result_type>& other)
     {
@@ -162,11 +158,11 @@ struct CardStatus
     unsigned m_index;
     unsigned m_player;
     unsigned m_delay;
-    Faction m_faction;
-    unsigned m_attack;
     unsigned m_hp;
-    unsigned m_max_hp;
     CardStep m_step;
+    unsigned m_perm_health_buff;
+    signed m_perm_attack_buff;
+    signed m_temp_attack_buff;
 
     unsigned m_corroded_rate;
     unsigned m_corroded_weakened;
@@ -174,25 +170,23 @@ struct CardStatus
     unsigned m_evaded;
     unsigned m_inhibited;
     unsigned m_sabotaged;
-    bool m_jammed;
-    bool m_overloaded;
     unsigned m_paybacked;
     unsigned m_tributed;
     unsigned m_poisoned;
     unsigned m_protected;
     unsigned m_protected_stasis;
-    unsigned m_rallied;
-    unsigned m_derallied;
     unsigned m_enraged;
     unsigned m_entrapped;
-    bool m_rush_attempted;
-    bool m_sundered;
-    unsigned m_weakened;
 
     signed m_primary_skill_offset[Skill::num_skills];
     signed m_evolved_skill_offset[Skill::num_skills];
     unsigned m_enhanced_value[Skill::num_skills];
     unsigned m_skill_cd[Skill::num_skills];
+
+    bool m_jammed;
+    bool m_overloaded;
+    bool m_rush_attempted;
+    bool m_sundered;
 
     CardStatus() {}
 
@@ -200,10 +194,14 @@ struct CardStatus
     void set(const Card& card);
     std::string description() const;
     inline unsigned skill_base_value(Skill::Skill skill_id) const;
-    unsigned skill(Skill::Skill skill_id) const;
-    bool has_skill(Skill::Skill skill_id) const;
-    unsigned enhanced(Skill::Skill skill) const;
-    unsigned protected_value() const;
+    inline unsigned skill(Skill::Skill skill_id) const;
+    inline bool has_skill(Skill::Skill skill_id) const;
+    inline unsigned enhanced(Skill::Skill skill) const;
+    inline unsigned protected_value() const;
+    inline unsigned attack_power() const;
+    inline unsigned max_hp() const;
+    inline unsigned add_hp(unsigned value);
+    inline unsigned ext_hp(unsigned value);
 };
 //------------------------------------------------------------------------------
 // Represents a particular draw from a deck.
@@ -356,8 +354,6 @@ public:
     inline CardStatus * left_assault(const CardStatus * status, const unsigned n);
     inline CardStatus * right_assault(const CardStatus * status);
     inline CardStatus * right_assault(const CardStatus * status, const unsigned n);
-    inline const std::vector<CardStatus *> adjacent_assaults(const CardStatus * status);
-    inline const std::vector<CardStatus *> adjacent_assaults(const CardStatus * status, const unsigned n);
     inline void print_selection_array();
     inline void prepare_action();
     inline void finalize_action();
@@ -372,5 +368,28 @@ public:
     }
 #endif
 };
+
+//------------------------------------------------------------------------------
+template<typename x_type>
+inline std::string skill_description(const _SkillSpec<x_type>& s)
+{
+    return skill_names[s.id] +
+       (s.all ? " all" : s.n == 0 ? "" : std::string(" ") + to_string(s.n)) +
+       (s.y == allfactions ? "" : std::string(" ") + faction_names[s.y]) +
+       (s.s == Skill::no_skill ? "" : std::string(" ") + skill_names[s.s]) +
+       (s.s2 == Skill::no_skill ? "" : std::string(" ") + skill_names[s.s2]) +
+       (s.x == 0 ? "" : std::string(" ") + to_string(s.x)) +
+       (s.c == 0 ? "" : std::string(" every ") + to_string(s.c));
+}
+
+template<typename x_type>
+inline std::string skill_short_description(const _SkillSpec<x_type>& s)
+{
+    // NOTE: not support summon
+    return skill_names[s.id] +
+        (s.s == Skill::no_skill ? "" : std::string(" ") + skill_names[s.s]) +
+        (s.s2 == Skill::no_skill ? "" : std::string(" ") + skill_names[s.s2]) +
+        (s.x == 0 ? "" : std::string(" ") + to_string(s.x));
+}
 
 #endif

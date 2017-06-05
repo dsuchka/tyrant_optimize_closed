@@ -20,7 +20,8 @@ for i in "$@"; do
         echo "$xname => $pid (dead)" 1>&2
         continue
     fi
-    echo "$xname => $pid (kill -${sign})" 1>&2
+    swap=$(cat /proc/$pid/status | fgrep VmSwap | sed -r -e 's/^VmSwap:\s*//g')
+    echo "$xname => $pid (kill -${sign}) (swap: $swap)" 1>&2
     kill -"${sign}" "$pid"
     case "${sign^^}" in
         9|15|TERM|KILL)

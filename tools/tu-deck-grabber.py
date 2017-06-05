@@ -384,7 +384,8 @@ def doGrabLastDeck(http):
                     break
                 if 'war_points' in rewards:
                     game_type = 'GW'
-        # TODO: CQ
+                if 'conquest_influence' in rewards:
+                    game_type = 'CQ'
 
     # deck header
     enemy_guild_name = enemy_udb_entry and enemy_udb_entry.guild_name or '__UNKNOWN__'

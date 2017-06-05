@@ -578,6 +578,28 @@
 			</always_include>
 		</deck>
 	</raid>
+	<raid>
+		<id>38</id>
+		<name>Octane Overcharged Raid</name>
+		<levels>26</levels>
+		<commander>25486</commander>
+		<effects>
+			<skill id="overload" all="1"/>
+			<skill id="strike" x=".6"/>
+			<skill id="heal" all="1" x=".5"/>
+			<skill id="protect" all="1" x=".4"/>
+			<skill id="entrap" all="1" x=".5"/>
+		</effects>
+		<deck>
+			<card_pool amount="10">
+				<card replicates="1">18262</card>
+				<card replicates="3">48130</card>
+				<card replicates="3">48140</card>
+				<card replicates="3">48150</card>
+				<card replicates="3">48160</card>
+			</card_pool>
+		</deck>
+	</raid>
 <!-- END of Raids -->
 
 

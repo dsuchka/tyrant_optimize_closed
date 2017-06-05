@@ -66,11 +66,13 @@ public:
     std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>> variable_cards;  // amount, replicates, card pool
     unsigned deck_size;
     unsigned mission_req;
+    unsigned level;
 
     std::string deck_string;
     std::unordered_set<unsigned> vip_cards;
     std::vector<unsigned> given_hand;
     std::vector<const Card*> fortress_cards;
+    std::vector<SkillSpecXMult> effects;
 
     Deck(
         const Cards& all_cards_,

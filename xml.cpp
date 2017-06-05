@@ -59,6 +59,12 @@ unsigned node_value(xml_node<>* skill, const char* attribute, unsigned default_v
     return value_node ? atoi(value_node->value()) : default_value;
 }
 
+double node_value_float(xml_node<>* skill, const char* attribute, double default_value = 0)
+{
+    xml_attribute<>* value_node(skill->first_attribute(attribute));
+    return value_node ? atof(value_node->value()) : default_value;
+}
+
 Skill::Skill skill_target_skill(xml_node<>* skill, const char* attribute)
 {
     Skill::Skill s(Skill::no_skill);
@@ -431,9 +437,32 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
     std::vector<const Card*> always_cards;
     std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>> some_forts;
     std::vector<std::tuple<unsigned, unsigned, std::vector<const Card*>>> some_cards;
-    xml_node<>* deck_node(node->first_node("deck"));
     xml_node<>* levels_node(node->first_node("levels"));
+    xml_node<>* effects_node(node->first_node("effects"));
+    xml_node<>* deck_node(node->first_node("deck"));
     unsigned max_level = levels_node ? atoi(levels_node->value()) : 10;
+
+    // Effectes (skill based BGEs; assuming that X is a floating point number (multiplier))
+    std::vector<SkillSpecXMult> effects;
+    if (effects_node)
+    {
+        for (xml_node<>* skill_node = effects_node->first_node("skill");
+                skill_node;
+                skill_node = skill_node->next_sibling("skill"))
+        {
+            auto skill_name = skill_node->first_attribute("id")->value();
+            Skill::Skill skill_id = skill_name_to_id(skill_name);
+            if (skill_id == Skill::no_skill) { throw std::runtime_error("unknown skill id:" + to_string(skill_name)); }
+            auto x = node_value_float(skill_node, "x", 0.0);
+            auto y = skill_faction(skill_node);
+            auto n = node_value(skill_node, "n", 0);
+            auto c = node_value(skill_node, "c", 0);
+            auto s = skill_target_skill(skill_node, "s");
+            auto s2 = skill_target_skill(skill_node, "s2");
+            bool all(skill_node->first_attribute("all"));
+            effects.push_back({skill_id, x, y, n, c, s, s2, all});
+        }
+    }
 
     // Fixed fortresses (<fortress_card id="xxx"/>)
     std::vector<const Card*> fortress_cards;
@@ -525,6 +554,8 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
         Deck* deck = &decks.decks.back();
         deck->set(commander_card, commander_max_level, always_cards, some_forts, some_cards, mission_req);
         deck->fortress_cards = fortress_cards;
+        deck->effects = effects;
+        deck->level = level;
         decks.add_deck(deck, deck_name);
         decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id) + "-" + to_string(level));
     }
@@ -533,6 +564,8 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
     Deck* deck = &decks.decks.back();
     deck->set(commander_card, commander_max_level, always_cards, some_forts, some_cards, mission_req);
     deck->fortress_cards = fortress_cards;
+    deck->effects = effects;
+    deck->level = max_level;
 
     // upgrade cards for full-level missions/raids
     if (max_level > 1)
@@ -634,7 +667,6 @@ void read_raids(Decks& decks, const Cards& all_cards, const std::string & filena
         campaign_node = campaign_node->next_sibling("campaign"))
     {
         xml_node<>* id_node(campaign_node->first_node("id"));
-        assert(id_node);
         unsigned id(id_node ? atoi(id_node->value()) : 0);
         for (auto && name_node = campaign_node->first_node("name");
             name_node;

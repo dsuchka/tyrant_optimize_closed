@@ -44,6 +44,7 @@ const std::string passive_bge_names[PassiveBGE::num_passive_bges] =
     "Bloodlust", "Brigade", "Counterflux", "Divert", "EnduringRage", "Fortification", "Heroism",
     "ZealotsPreservation", "Metamorphosis", "Megamorphosis", "Revenge", "TurningTides", "Virulence",
     "HaltedOrders", "Devour", "CriticalReach", "TemporalBacklash", "Furiosity", "OathOfLoyalty",
+    "BloodVengeance",
 };
 
 const std::string cardtype_names[CardType::num_cardtypes]{"Commander", "Assault", "Structure", };
