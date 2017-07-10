@@ -176,8 +176,8 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
         {
             card->m_type = CardType::structure;
 
-            // fortress 1
-            if ((card->m_id >= 2700) && (card->m_id < 2748))
+            // fortress
+            if ((card->m_id >= 2700) && (card->m_id < 2997))
             {
                 if (fortress_type_node) {
                     unsigned fort_type_value = atoi(fortress_type_node->value());
@@ -192,32 +192,11 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
                         std::cerr << "Warning: parsing card [" << card->m_id << "]: unsupported fortress_type=" << fort_type_value << std::endl;
                     }
                 }
-                else
+                else if ((card->m_id < 2748) || (card->m_id >= 2754)) // except Sky Fortress
                 {
                     std::cerr << "Warning: parsing card [" << card->m_id << "]: expected fortress_type node" << std::endl;
                 }
             }
-            // fortress 2
-            if ((card->m_id >= 2754) && (card->m_id < 2997))
-            {
-                if (fortress_type_node) {
-                    unsigned fort_type_value = atoi(fortress_type_node->value());
-                    switch (fort_type_value) {
-                    case 1:
-                        card->m_category = CardCategory::fortress_defense;
-                        break;
-                    case 2:
-                        card->m_category = CardCategory::fortress_siege;
-                        break;
-                    default:
-                        std::cerr << "Warning: parsing card [" << card->m_id << "]: unsupported fortress_type=" << fort_type_value << std::endl;
-                    }
-                }
-                else
-                {
-                    std::cerr << "Warning: parsing card [" << card->m_id << "]: expected fortress_type node" << std::endl;
-                }
-            }			
         }
 
         // [3000 ... 7999]
