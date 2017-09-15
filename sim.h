@@ -377,7 +377,9 @@ extern std::string card_name_by_id_safe(const Cards& cards, const unsigned card_
 template<typename x_type>
 inline std::string skill_description(const Cards& cards, const _SkillSpec<x_type>& s, Skill::Trigger trig)
 {
+    //APN
     return ((trig == Skill::Trigger::play) ? "(On Play)" :
+            (trig == Skill::Trigger::attacked) ? "(On Attacked)" :
             (trig == Skill::Trigger::death) ? "(On Death)" : "") +
         skill_names[s.id] +
         (s.card_id == 0 ? "" : " " + card_name_by_id_safe(cards, s.card_id) + " id[" + to_string(s.card_id) + "]") +

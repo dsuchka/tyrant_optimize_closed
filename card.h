@@ -23,6 +23,8 @@ public:
     unsigned m_set;
     std::vector<SkillSpec> m_skills;
     std::vector<SkillSpec> m_skills_on_play;
+    //APN
+    std::vector<SkillSpec> m_skills_on_attacked;
     std::vector<SkillSpec> m_skills_on_death;
     unsigned m_skill_value[Skill::num_skills];
     Skill::Trigger m_skill_trigger[Skill::num_skills];
@@ -48,6 +50,8 @@ public:
         m_set(0),
         m_skills(),
         m_skills_on_play(),
+	//APN
+	m_skills_on_attacked(),
         m_skills_on_death(),
         m_type(CardType::assault),
         m_category(CardCategory::normal),

@@ -191,6 +191,10 @@ void Card::add_skill(Skill::Trigger trigger, Skill::Skill id, unsigned x, Factio
     case Skill::Trigger::play:
         storage = &m_skills_on_play;
         break;
+    //APN
+    case Skill::Trigger::attacked:
+        storage = &m_skills_on_attacked;
+        break;
     case Skill::Trigger::death:
         storage = &m_skills_on_death;
         break;
@@ -205,6 +209,8 @@ void Card::add_skill(Skill::Trigger trigger, Skill::Skill id, unsigned x, Factio
         m_skills.erase(std::remove_if(m_skills.begin(), m_skills.end(), pred), m_skills.end());
         m_skills_on_play.erase(std::remove_if(m_skills_on_play.begin(), m_skills_on_play.end(), pred), m_skills_on_play.end());
         m_skills_on_death.erase(std::remove_if(m_skills_on_death.begin(), m_skills_on_death.end(), pred), m_skills_on_death.end());
+        //APN
+        m_skills_on_attacked.erase(std::remove_if(m_skills_on_attacked.begin(), m_skills_on_attacked.end(), pred), m_skills_on_attacked.end());
     }
     // add a new one
     storage->push_back({id, x, y, n, c, s, s2, all, card_id});

@@ -37,7 +37,7 @@ const std::string skill_names[Skill::num_skills] =
 
 const std::string skill_trigger_names[Skill::num_triggers] =
 {
-    "activate", "play", "death",
+    "activate", "play", "attacked","death",
 };
 
 const std::string passive_bge_names[PassiveBGE::num_passive_bges] =
