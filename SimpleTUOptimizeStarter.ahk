@@ -94,7 +94,7 @@ Gui, Add, Edit, vSimOptions r1 xs w600, %IniSimOptions%
 Gui, Add, Button, default r2 w100 x100 y+15 section, Simulate
 Gui, Add, Checkbox, vx86 Checked%Inix86%, x86 (32-bit)
 Gui, Add, Button, r2 w100 ys xs+200, Exit
-Gui, Show,, Simple Tyrant Unleashed Optimize Starter v2.54.3
+Gui, Show,, Simple Tyrant Unleashed Optimize Starter v2.54.5
 return
 
 ButtonSimulate:
