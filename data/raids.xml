@@ -612,6 +612,55 @@
 			</always_include>
 		</deck>
 	</raid>
+
+	<raid>
+		<id>40</id>
+		<name>Intrepid Returns Raid</name>
+		<commander>1855</commander>
+		<levels>26</levels>
+			<fortress_pool amount="2">
+				<card replicates="2">8774</card>
+				<card replicates="2">8784</card>
+			</fortress_pool>
+		<deck>
+			<always_include>
+				<card>31827</card>
+				<card>31837</card>
+				<card>31847</card>
+				<card>31857</card>
+			</always_include>
+			<card_pool amount="6">
+				<card>31827</card>
+				<card>31827</card>
+				<card>31827</card>
+				<card>31837</card>
+				<card>31837</card>
+				<card>31837</card>
+				<card>31847</card>
+				<card>31847</card>
+				<card>31847</card>
+				<card>31857</card>
+				<card>31857</card>
+				<card>31857</card>
+			</card_pool>
+		</deck>
+	</raid>
+	
+	<raid>
+		<id>41</id>
+		<name>Door of Khensu Raid</name>
+		<commander>25782</commander>
+		<fortress_card id="18348"/>
+		<levels>26</levels>
+		<deck>
+			<always_include>
+				<card replicates="4">55790</card>
+				<card replicates="3">55800</card>
+				<card replicates="3">55810</card>
+			</always_include>
+		</deck>
+	</raid>
+
 <!-- END of Raids -->
 
 

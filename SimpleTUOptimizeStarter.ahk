@@ -94,7 +94,7 @@ Gui, Add, Edit, vSimOptions r1 xs w600, %IniSimOptions%
 Gui, Add, Button, default r2 w100 x100 y+15 section, Simulate
 Gui, Add, Checkbox, vx86 Checked%Inix86%, x86 (32-bit)
 Gui, Add, Button, r2 w100 ys xs+200, Exit
-Gui, Show,, Simple Tyrant Unleashed Optimize Starter v2.54.2
+Gui, Show,, Simple Tyrant Unleashed Optimize Starter v2.54.5
 return
 
 ButtonSimulate:
@@ -149,7 +149,7 @@ return
 
 MenuWeb:
 Gui, Submit
-Run https://github.com/dsuchka/tyrant_optimize/releases
+Run https://github.com/brikikeks/tyrant_optimize/releases
 Gui, Show
 return
 
@@ -180,7 +180,7 @@ if ErrorLevel
     MsgBox, Error downloading levels.xml.
     had_error := true
 }
-Loop, 13
+Loop, 14
 {
     UrlDownloadToFile, *0 http://mobile.tyrantonline.com/assets/cards_section_%A_Index%.xml, data\cards_section_%A_Index%.xml
     if ErrorLevel
@@ -189,13 +189,13 @@ Loop, 13
         had_error := true
     }
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/raids.xml, data\raids.xml
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/brikikeks/tyrant_optimize/merged/data/raids.xml, data\raids.xml
 if ErrorLevel
 {
     MsgBox, Error downloading raids.xml.
     had_error := true
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/bges.txt, data\bges.txt
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/brikikeks/tyrant_optimize/merged/data/bges.txt, data\bges.txt
 if ErrorLevel
 {
     MsgBox, Error downloading bges.txt.
@@ -242,13 +242,13 @@ Loop, 13
         had_error := true
     }
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/raids.xml, data\raids.xml
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/brikikeks/tyrant_optimize/merged/data/raids.xml, data\raids.xml
 if ErrorLevel
 {
     MsgBox, Error downloading raids.xml.
     had_error := true
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/bges.txt, data\bges.txt
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/brikikeks/tyrant_optimize/merged/data/bges.txt, data\bges.txt
 if ErrorLevel
 {
     MsgBox, Error downloading bges.txt.

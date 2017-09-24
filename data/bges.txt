@@ -49,10 +49,9 @@ Phobos Station: Orbital Bombardment
 Orbital Bombardment: Strike all 3; Siege all 5
 // --
 The Spire: Imperial Domain
-Imperial Domain: Heal all 5
-// --
+Imperial Domain: Heal all 7// --
 SkyCom Complex: Network Interference
-Network Interference: Weaken all 4
+Network Interference: Weaken all 6
 // --
 Mech Graveyard: Scrap Field
 Scrap Field: Evolve 2 Pierce Rupture
@@ -71,7 +70,7 @@ Colonial Relay: CriticalReach
 Borean Forges: Fortification
 // --
 Brood Nest: Blighted Swamps
-Blighted Swamps: Enfeeble all 3
+Blighted Swamps: Enfeeble all 4
 // --
 Cleave Rock: Splinter Legacy
 Splinter Legacy: Enhance all Berserk 4
@@ -81,10 +80,10 @@ Elder Port: Oath-of-Loyalty
 Infested Depot: Devour
 // --
 Jotun's Pantheon: Jotun's Presence
-Jotun's Presence: Protect all 3
+Jotun's Presence: Protect all 4
 // --
 Magma Foundry: Volcanic Rain
-Volcanic Rain: Strike all 3
+Volcanic Rain: Strike all 5
 // --
 Malort's Den: Lethal Spores
 Lethal Spores: Enhance all Venom 5
@@ -93,7 +92,7 @@ Norhaven: Storm Shelters
 Storm Shelters: Enhance all Evade 3
 // --
 Red Maw Base: Red Maw Barracks
-Red Maw Barracks: Rally all 3
+Red Maw Barracks: Rally all 5
 // --
 Tyrolian Outpost: Reforged Plating
 Reforged Plating: Enhance all Armor 6

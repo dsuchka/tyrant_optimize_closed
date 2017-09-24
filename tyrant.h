@@ -1,7 +1,7 @@
 #ifndef TYRANT_H_INCLUDED
 #define TYRANT_H_INCLUDED
 
-#define TYRANT_OPTIMIZER_VERSION "2.54.2"
+#define TYRANT_OPTIMIZER_VERSION "2.54.3"
 
 #include <string>
 #include <sstream>
@@ -63,6 +63,8 @@ enum Trigger
 {
     activate,
     play,
+    //APN
+    attacked,
     death,
     num_triggers
 };

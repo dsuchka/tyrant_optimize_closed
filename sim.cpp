@@ -258,6 +258,8 @@ std::string card_description(const Cards& cards, const Card* c)
     if (c->m_faction != allfactions) { desc += " " + faction_names[c->m_faction]; }
     for (auto& skill: c->m_skills_on_play) { desc += ", " + skill_description(cards, skill, Skill::Trigger::play); }
     for (auto& skill: c->m_skills) { desc += ", " + skill_description(cards, skill, Skill::Trigger::activate); }
+    //APN
+    for (auto& skill: c->m_skills_on_attacked) { desc += ", " + skill_description(cards, skill, Skill::Trigger::attacked); }
     for (auto& skill: c->m_skills_on_death) { desc += ", " + skill_description(cards, skill, Skill::Trigger::death); }
     return desc;
 }
@@ -312,12 +314,15 @@ std::string CardStatus::description() const
     if (m_enraged) { desc += ", enraged " + to_string(m_enraged); }
     if (m_entrapped) { desc += ", entrapped " + to_string(m_entrapped); }
 //    if(m_step != CardStep::none) { desc += ", Step " + to_string(static_cast<int>(m_step)); }
-    const Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death };
+    //APN
+    const Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death , Skill::Trigger::attacked};
     for (const Skill::Trigger& trig: s_triggers)
     {
         std::vector<SkillSpec> card_skills(
             (trig == Skill::Trigger::play) ? m_card->m_skills_on_play :
             (trig == Skill::Trigger::activate) ? m_card->m_skills :
+            //APN
+            (trig == Skill::Trigger::attacked) ? m_card->m_skills_on_attacked :
             (trig == Skill::Trigger::death) ? m_card->m_skills_on_death :
             std::vector<SkillSpec>());
 
@@ -344,6 +349,7 @@ std::string CardStatus::description() const
             {
                 desc += ", " + (
                     (trig == Skill::Trigger::play) ? "(On Play)" :
+                    (trig == Skill::Trigger::attacked) ? "(On Attacked)" :
                     (trig == Skill::Trigger::death) ? "(On Death)" :
                     std::string("")) + skill_names[ss.id] + skill_desc;
             }
@@ -1116,6 +1122,15 @@ struct PerformAttack
         attack_damage<def_cardtype>();
         if (__builtin_expect(fd->end, false)) { return att_dmg; }
         damage_dependant_pre_oa<def_cardtype>();
+        //APN
+        // resolve On-Attacked skills
+        for (const auto& ss: def_status->m_card->m_skills_on_attacked)
+        {
+            _DEBUG_MSG(1, "On Attacked %s: Preparing (tail) skill %s\n",
+                status_description(def_status).c_str(), skill_description(fd->cards, ss).c_str());
+            fd->skill_queue.emplace_back(def_status, ss);
+            resolve_skill(fd);
+        }
 
         // Enemy Skill: Counter
         if (def_status->has_skill(Skill::counter))
