@@ -612,6 +612,123 @@
 			</always_include>
 		</deck>
 	</raid>
+
+	<raid>
+		<id>40</id>
+		<name>Intrepid Returns Raid</name>
+		<commander>1855</commander>
+		<levels>26</levels>
+			<fortress_pool amount="2">
+				<card replicates="2">8774</card>
+				<card replicates="2">8784</card>
+			</fortress_pool>
+		<deck>
+			<always_include>
+				<card>31827</card>
+				<card>31837</card>
+				<card>31847</card>
+				<card>31857</card>
+			</always_include>
+			<card_pool amount="6">
+				<card>31827</card>
+				<card>31827</card>
+				<card>31827</card>
+				<card>31837</card>
+				<card>31837</card>
+				<card>31837</card>
+				<card>31847</card>
+				<card>31847</card>
+				<card>31847</card>
+				<card>31857</card>
+				<card>31857</card>
+				<card>31857</card>
+			</card_pool>
+		</deck>
+	</raid>
+
+	<raid>
+		<id>41</id>
+		<name>Door of Khensu Raid</name>
+		<commander>25782</commander>
+		<fortress_card id="18348"/>
+		<levels>26</levels>
+		<deck>
+			<always_include>
+				<card replicates="4">55790</card>
+				<card replicates="3">55800</card>
+				<card replicates="3">55810</card>
+			</always_include>
+		</deck>
+	</raid>
+<raid>
+  <id>42</id> 
+  <name>Enclave Advisors Raid</name>
+  <levels>26</levels>
+  <commander>25810</commander>
+  <fortress_pool amount="2">
+   <card replicates="1">18424</card>
+   <card replicates="1">18434</card>
+   <card replicates="1">18444</card>
+   <card replicates="1">18454</card>
+  </fortress_pool>
+  <deck>
+   <card_pool amount="10">
+    <card replicates="3">56504</card>
+    <card replicates="3">56514</card>
+    <card replicates="3">56524</card>
+    <card replicates="3">56534</card>
+   </card_pool>
+  </deck>
+ </raid>
+ 
+ <raid>
+  <id>43</id> 
+  <name>Knights of the Pantheons Raid</name>
+  <levels>26</levels>
+  <commander>25844</commander>
+  <fortress_card id="18512"/> 
+  <deck>
+   <card_pool amount="10">
+    <card replicates="4">57150</card>
+    <card replicates="2">57160</card>
+    <card replicates="4">57170</card>
+   </card_pool>
+  </deck>
+ </raid>
+	
+<!-- Mechmaster Yurich Raid has id 49, version with id 44 will be removed TODO -->
+<raid>
+  <id>49</id>
+  <name>Mechmaster Yurich Raid</name>
+  <levels>26</levels>
+  <commander>25884</commander>
+  <fortress_card id="18564"/>
+  <deck>
+   <always_include>
+    <card replicates="2">57838</card>
+    <card replicates="2">57848</card>
+    <card replicates="2">57858</card>
+    <card replicates="2">57868</card>
+    <card replicates="2">57878</card>
+   </always_include>
+  </deck>
+ </raid>
+	
+<raid>  
+   <id>50</id>  
+   <name>Kalihmah Raid</name>  
+   <levels>26</levels>  
+   <commander>25928</commander>  
+   <fortress_card id="18598"/>  
+   <deck>   
+    <always_include>
+   	<card replicates="3">58658</card>
+    	<card replicates="3">58668</card>
+    	<card replicates="2">58678</card>
+    	<card replicates="2">58688</card> 
+    <always_include>  
+   </deck>  
+  </raid>
 <!-- END of Raids -->
 
 

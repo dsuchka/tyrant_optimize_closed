@@ -14,7 +14,7 @@ For Ubunutu/Debian
 1. Install required packages
   * `apt install g++ make git libboost-all-dev`
 2. Get the lastest rev. of tuo
-  * `git clone git://github.com/dsuchka/tyrant_optimize`
+  * `git clone git://github.com/APN-Pucky/tyrant_optimize`
 3. Compile!
   * `cd tyrant_optimize && make -f Makefile.linux`
 4. Update the card data files

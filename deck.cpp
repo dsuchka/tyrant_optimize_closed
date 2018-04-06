@@ -241,7 +241,7 @@ void Deck::set(const std::vector<unsigned>& ids, const std::map<signed, char> &m
             add_dominion(card, false);
             non_deck_cards_seen++;
         }
-        else if (card->m_category == CardCategory::fortress_defense || card->m_category == CardCategory::fortress_siege)
+        else if (card->m_category == CardCategory::fortress_defense || card->m_category == CardCategory::fortress_siege || card->m_category == CardCategory::fortress_conquest)
         {
             fortress_cards.emplace_back(card);
             non_deck_cards_seen++;
@@ -694,7 +694,7 @@ void Deck::shuffle(std::mt19937& re)
             }
             std::shuffle(shufflable_iter, pool->end(), re);
         }
-#if 0
+#if 0 
         if (!given_hand.empty())
         {
             for (auto card: cards) std::cout << ", " << card->m_name;

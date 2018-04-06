@@ -1,7 +1,9 @@
 #ifndef TYRANT_H_INCLUDED
 #define TYRANT_H_INCLUDED
 
-#define TYRANT_OPTIMIZER_VERSION "2.54.2"
+#ifndef TYRANT_OPTIMIZER_VERSION
+#define TYRANT_OPTIMIZER_VERSION "NO VERSION"
+#endif
 
 #include <string>
 #include <sstream>
@@ -37,14 +39,14 @@ enum Skill
     enfeeble, jam, mortar, siege, strike, sunder, weaken,
 
     // Activation (helpful):
-    enhance, evolve, heal, mend, overload, protect, rally,
+    enhance, evolve, heal, mend, overload, protect, rally, fortify,
     enrage, entrap, rush,
 
     // Activation (unclassified/polymorphic):
     mimic,
 
     // Defensive:
-    armor, avenge, corrosive, counter, evade, subdue,
+    armor, avenge, corrosive, counter, evade, subdue, absorb, flying,
     payback, revenge, tribute, refresh, wall, barrier,
 
     // Combat-Modifier:
@@ -54,7 +56,7 @@ enum Skill
     berserk, inhibit, sabotage, leech, poison,
 
     // Triggered:
-    allegiance, flurry, valor, stasis, summon,
+    allegiance, flurry, valor, stasis, summon, bravery,
 
     // End of skills
     num_skills
@@ -63,6 +65,7 @@ enum Trigger
 {
     activate,
     play,
+    attacked,
     death,
     num_triggers
 };
@@ -81,7 +84,7 @@ enum PassiveBGE
     bloodlust, brigade, counterflux, divert, enduringrage, fortification, heroism,
     zealotspreservation, metamorphosis, megamorphosis, revenge, turningtides, virulence,
     haltedorders, devour, criticalreach, temporalbacklash, furiosity, oath_of_loyalty,
-    bloodvengeance, coldsleep,
+    bloodvengeance, coldsleep,ironwill,unity,
 
     // End of BGEs
     num_passive_bges
@@ -125,6 +128,7 @@ inline bool is_activation_helpful_skill(Skill::Skill skill_id)
     case Skill::evolve:
     case Skill::heal:
     case Skill::mend:
+    case Skill::fortify:
     case Skill::overload:
     case Skill::protect:
     case Skill::rally:
@@ -163,6 +167,7 @@ inline bool is_activation_skill_with_x(Skill::Skill skill_id)
     case Skill::mimic:
     case Skill::heal:
     case Skill::mend:
+    case Skill::fortify:
     case Skill::protect:
     case Skill::rally:
     case Skill::enrage:
@@ -184,6 +189,8 @@ inline bool is_defensive_skill(Skill::Skill skill_id)
     case Skill::counter:
     case Skill::evade:
     case Skill::subdue:
+    case Skill::absorb:
+    case Skill::flying:
     case Skill::payback:
     case Skill::revenge:
     case Skill::tribute:
@@ -199,6 +206,7 @@ inline bool is_combat_modifier_skill(Skill::Skill skill_id)
 {
     switch(skill_id)
     {
+    case Skill::coalition:
     case Skill::legion:
     case Skill::pierce:
     case Skill::rupture:
@@ -235,6 +243,7 @@ inline bool is_triggered_skill(Skill::Skill skill_id)
     case Skill::valor:
     case Skill::stasis:
     case Skill::summon:
+    case Skill::bravery:
         return true;
     default:
         return false;
@@ -253,6 +262,20 @@ inline PassiveBGE::PassiveBGE passive_bge_name_to_id(const std::string& name_)
         }
     }
     return PassiveBGE::no_bge;
+}
+
+inline Faction faction_name_to_id(const std::string& name_)
+{
+    std::string name(name_);
+    name.erase(std::remove_if(name.begin(), name.end(), boost::is_any_of("-")), name.end()); //Mostly useless
+    for (unsigned i(allfactions); i < num_factions; ++i)
+    {
+        if (boost::iequals(faction_names[i], name))
+        {
+            return static_cast<Faction>(i);
+        }
+    }
+    return allfactions;
 }
 
 inline void map_keys_to_set(const std::unordered_map<unsigned, unsigned>& m, std::unordered_set<unsigned>& s)
@@ -341,6 +364,7 @@ enum class OptimizationMode
     winrate,
     defense,
     war,
+	war_defense,
     brawl,
     brawl_defense,
     raid,
@@ -422,5 +446,6 @@ extern std::string debug_str;
 #define _DEBUG_SELECTION(format, args...)
 #define _DEBUG_ASSERT(expr)
 #endif
+
 
 #endif

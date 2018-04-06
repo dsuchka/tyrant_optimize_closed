@@ -15,6 +15,7 @@
 #include "deck.h"
 
 bool check_and_perform_valor(Field* fd, CardStatus* src);
+bool check_and_perform_bravery(Field* fd, CardStatus* src);
 CardStatus* check_and_perform_summon(Field* fd, CardStatus* src);
 
 //------------------------------------------------------------------------------
@@ -23,6 +24,7 @@ inline bool is_alive(CardStatus* c) { return (c->m_hp > 0); }
 inline bool can_act(CardStatus* c) { return is_alive(c) && !c->m_jammed; }
 inline bool is_active(CardStatus* c) { return can_act(c) && (c->m_delay == 0); }
 inline bool is_active_next_turn(CardStatus* c) { return can_act(c) && (c->m_delay <= 1); }
+inline bool will_activate_this_turn(CardStatus* c) { return is_active(c) && ((c->m_step == CardStep::none) || (c->m_step == CardStep::attacking && c->has_skill(Skill::flurry) && c->m_action_index < c->skill_base_value(Skill::flurry)));}
 // Can be healed / repaired
 inline bool can_be_healed(CardStatus* c) { return is_alive(c) && (c->m_hp < c->max_hp()); }
 // Strange Transmission [Gilians] features
@@ -184,9 +186,11 @@ inline void CardStatus::set(const Card& card)
 {
     m_card = &card;
     m_index = 0;
+    m_action_index=0;
     m_player = 0;
     m_delay = card.m_delay;
     m_hp = card.m_health;
+    m_absorption = 0;
     m_step = CardStep::none;
     m_perm_health_buff = 0;
     m_perm_attack_buff = 0;
@@ -209,6 +213,8 @@ inline void CardStatus::set(const Card& card)
     m_entrapped = 0;
     m_rush_attempted = false;
     m_sundered = false;
+    //APN
+    m_summoned = false;
 
     std::memset(m_primary_skill_offset, 0, sizeof m_primary_skill_offset);
     std::memset(m_evolved_skill_offset, 0, sizeof m_evolved_skill_offset);
@@ -218,14 +224,23 @@ inline void CardStatus::set(const Card& card)
 //------------------------------------------------------------------------------
 inline unsigned CardStatus::attack_power() const
 {
-    signed attack =
-        (signed)safe_minus(
+    signed attack = calc_attack_power();
+	if(__builtin_expect(attack <0,false))
+	{
+		std::cout << m_card->m_name << " " << m_card->m_attack  << " " << attack << " " << m_temp_attack_buff << " " << m_corroded_weakened << std::endl;	
+	}
+    _DEBUG_ASSERT(attack >= 0);
+    return (unsigned)attack;
+}
+
+inline signed CardStatus::calc_attack_power() const
+{
+	return 
+		(signed)safe_minus(
             m_card->m_attack + safe_minus(m_perm_attack_buff, m_subdued),
             m_corroded_weakened
         )
         + m_temp_attack_buff;
-    _DEBUG_ASSERT(attack >= 0);
-    return (unsigned)attack;
 }
 //------------------------------------------------------------------------------
 std::string card_name_by_id_safe(const Cards& cards, const unsigned card_id)
@@ -258,6 +273,8 @@ std::string card_description(const Cards& cards, const Card* c)
     if (c->m_faction != allfactions) { desc += " " + faction_names[c->m_faction]; }
     for (auto& skill: c->m_skills_on_play) { desc += ", " + skill_description(cards, skill, Skill::Trigger::play); }
     for (auto& skill: c->m_skills) { desc += ", " + skill_description(cards, skill, Skill::Trigger::activate); }
+    //APN
+    for (auto& skill: c->m_skills_on_attacked) { desc += ", " + skill_description(cards, skill, Skill::Trigger::attacked); }
     for (auto& skill: c->m_skills_on_death) { desc += ", " + skill_description(cards, skill, Skill::Trigger::death); }
     return desc;
 }
@@ -290,6 +307,7 @@ std::string CardStatus::description() const
     case CardType::structure:
     case CardType::commander:
         desc += " hp:" + to_string(m_hp);
+		if(m_absorption)desc += " absorb:" + to_string(m_absorption);
         break;
     case CardType::num_cardtypes:
         assert(false);
@@ -300,6 +318,7 @@ std::string CardStatus::description() const
     if (m_jammed) { desc += ", jammed"; }
     if (m_overloaded) { desc += ", overloaded"; }
     if (m_sundered) { desc += ", sundered"; }
+    if (m_summoned) { desc+= ", summoned"; }
     // Status w/ value
     if (m_corroded_weakened || m_corroded_rate) { desc += ", corroded " + to_string(m_corroded_weakened) + " (rate: " + to_string(m_corroded_rate) + ")"; }
     if (m_subdued) { desc += ", subdued " + to_string(m_subdued); }
@@ -312,12 +331,15 @@ std::string CardStatus::description() const
     if (m_enraged) { desc += ", enraged " + to_string(m_enraged); }
     if (m_entrapped) { desc += ", entrapped " + to_string(m_entrapped); }
 //    if(m_step != CardStep::none) { desc += ", Step " + to_string(static_cast<int>(m_step)); }
-    const Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death };
+    //APN
+    const Skill::Trigger s_triggers[] = { Skill::Trigger::play, Skill::Trigger::activate, Skill::Trigger::death , Skill::Trigger::attacked};
     for (const Skill::Trigger& trig: s_triggers)
     {
         std::vector<SkillSpec> card_skills(
             (trig == Skill::Trigger::play) ? m_card->m_skills_on_play :
             (trig == Skill::Trigger::activate) ? m_card->m_skills :
+            //APN
+            (trig == Skill::Trigger::attacked) ? m_card->m_skills_on_attacked :
             (trig == Skill::Trigger::death) ? m_card->m_skills_on_death :
             std::vector<SkillSpec>());
 
@@ -344,6 +366,7 @@ std::string CardStatus::description() const
             {
                 desc += ", " + (
                     (trig == Skill::Trigger::play) ? "(On Play)" :
+                    (trig == Skill::Trigger::attacked) ? "(On Attacked)" :
                     (trig == Skill::Trigger::death) ? "(On Death)" :
                     std::string("")) + skill_names[ss.id] + skill_desc;
             }
@@ -359,6 +382,7 @@ void Hand::reset(std::mt19937& re)
     deck->shuffle(re);
     commander.set(deck->shuffled_commander);
     total_cards_destroyed = 0;
+    total_nonsummon_cards_destroyed = 0;
     if (commander.skill(Skill::stasis))
     {
         stasis_faction_bitmap |= (1u << commander.m_card->m_faction);
@@ -598,6 +622,7 @@ void evaluate_skills(Field* fd, CardStatus* status, const std::vector<SkillSpec>
     unsigned num_actions(1);
     for (unsigned action_index(0); action_index < num_actions; ++ action_index)
     {
+		status->m_action_index = action_index;
         fd->prepare_action();
         _DEBUG_ASSERT(fd->skill_queue.size() == 0);
         for (auto & ss: skills)
@@ -671,9 +696,175 @@ struct PlayCard
     template <enum CardType::CardType type>
     CardStatus* op()
     {
+	return op<type>(false);
+    }
+
+    template <enum CardType::CardType type>
+    CardStatus* op(bool summoned)
+    {
         setStorage<type>();
         placeCard<type>();
+	status->m_summoned = summoned;	
 
+        unsigned played_faction_mask(0);
+        unsigned same_faction_cards_count(0);
+	bool bge_megamorphosis = fd->bg_effects[fd->tapi][PassiveBGE::megamorphosis];
+	//played_status = status;
+	//played_card = card;
+		
+	check_and_perform_bravery(fd,status);
+        if (status->m_delay == 0)
+        {
+            check_and_perform_valor(fd, status);
+        }
+		
+	//refresh/init absorb
+	if(status->has_skill(Skill::absorb))
+	{
+		status->m_absorption = status->skill_base_value(Skill::absorb);
+	}
+		
+		
+	// 1. Evaluate skill Allegiance & count assaults with same faction (structures will be counted later)
+	// 2. Passive BGE Cold Sleep
+	for (CardStatus* status_i : fd->tap->assaults.m_indirect)
+	{
+		if (status_i == status || !is_alive(status_i)) { continue; } // except itself
+		//std::cout << status_description(status_i).c_str();
+		_DEBUG_ASSERT(is_alive(status_i));
+		if (bge_megamorphosis || (status_i->m_card->m_faction == card->m_faction))
+		{
+			++ same_faction_cards_count;
+			unsigned allegiance_value = status_i->skill(Skill::allegiance);
+			if (__builtin_expect(allegiance_value, false) && !status->m_summoned)
+			{
+				_DEBUG_MSG(1, "%s activates Allegiance %u\n", status_description(status_i).c_str(), allegiance_value);
+				if (! status_i->m_sundered)
+				{ status_i->m_perm_attack_buff += allegiance_value; }
+				status_i->ext_hp(allegiance_value);
+			}
+		}
+		if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::coldsleep], false)
+				&& status_i->m_protected_stasis && can_be_healed(status_i))
+		{
+			unsigned bge_value = (status_i->m_protected_stasis + 1) / 2;
+			_DEBUG_MSG(1, "Cold Sleep: %s heals itself for %u\n", status_description(status_i).c_str(), bge_value);
+			status_i->add_hp(bge_value);
+		}
+	}
+
+	// Setup faction marks (bitmap) for stasis (skill Stasis / Passive BGE TemporalBacklash)
+	// unless Passive BGE Megamorphosis is enabled
+	if (__builtin_expect(!bge_megamorphosis, true))
+	{
+		played_faction_mask = (1u << card->m_faction);
+		// do played card have stasis? mark this faction for stasis check
+		if (__builtin_expect(status->skill(Skill::stasis), false)
+			|| __builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::temporalbacklash] && status->skill(Skill::counter), false))
+		{
+			fd->tap->stasis_faction_bitmap |= played_faction_mask;
+		}
+	}
+
+        // Evaluate Passive BGE Oath-of-Loyalty
+	unsigned allegiance_value;
+        if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::oath_of_loyalty], false)
+			&& ((allegiance_value = status->skill(Skill::allegiance)) > 0))
+        {
+            // count structures with same faction (except fortresses, dominions and other non-normal structures)
+            for (CardStatus * status_i : fd->tap->structures.m_indirect)
+            {
+                if ((status_i->m_card->m_category == CardCategory::normal)
+                    && (bge_megamorphosis || (status_i->m_card->m_faction == card->m_faction)))
+                {
+                    ++ same_faction_cards_count;
+                }
+            }
+
+            // apply Passive BGE Oath-of-Loyalty when multiplier isn't zero
+            if (same_faction_cards_count)
+            {
+                unsigned bge_value = allegiance_value * same_faction_cards_count;
+                _DEBUG_MSG(1, "Oath of Loyalty: %s activates Allegiance %u x %u = %u\n",
+                    status_description(status).c_str(), allegiance_value, same_faction_cards_count, bge_value);
+                status->m_perm_attack_buff += bge_value;
+                status->ext_hp(bge_value);
+            }
+        }
+
+        // summarize stasis when:
+        //  1. Passive BGE Megamorphosis is enabled
+        //  2. current faction is marked for it
+        if ((card->m_delay > 0) && (card->m_type == CardType::assault)
+            && __builtin_expect(bge_megamorphosis || (fd->tap->stasis_faction_bitmap & played_faction_mask), false))
+        {
+            unsigned stacked_stasis = (bge_megamorphosis || (fd->tap->commander.m_card->m_faction == card->m_faction))
+                ? fd->tap->commander.skill(Skill::stasis)
+                : 0u;
+#ifndef NDEBUG
+            if (stacked_stasis > 0)
+            {
+                _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
+                    faction_names[card->m_faction].c_str(), stacked_stasis,
+                    status_description(&fd->tap->commander).c_str(), stacked_stasis);
+            }
+#endif
+            for (CardStatus * status_i : fd->tap->structures.m_indirect)
+			{
+                if ((bge_megamorphosis || (status_i->m_card->m_faction == card->m_faction)) && is_alive(status_i))
+                {
+					stacked_stasis += status_i->skill(Skill::stasis);
+#ifndef NDEBUG
+                    if (status_i->skill(Skill::stasis) > 0)
+                    {
+                        _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
+                            faction_names[card->m_faction].c_str(), status_i->skill(Skill::stasis),
+                            status_description(status_i).c_str(), stacked_stasis);
+                    }
+#endif
+                }
+            }
+            for (CardStatus * status_i : fd->tap->assaults.m_indirect)
+            {
+				if ((bge_megamorphosis || (status_i->m_card->m_faction == card->m_faction)) && is_alive(status_i))
+                {
+                    stacked_stasis += status_i->skill(Skill::stasis);
+#ifndef NDEBUG
+					if (status_i->skill(Skill::stasis) > 0)
+                    {
+                        _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
+                            faction_names[card->m_faction].c_str(), status_i->skill(Skill::stasis),
+                            status_description(status_i).c_str(), stacked_stasis);
+                    }
+#endif
+                    if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::temporalbacklash] && status_i->skill(Skill::counter), false))
+                    {
+                        stacked_stasis += (status_i->skill(Skill::counter) + 1) / 2;
+#ifndef NDEBUG
+                        _DEBUG_MSG(2, "Temporal Backlash: + Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
+                            faction_names[card->m_faction].c_str(), (status_i->skill(Skill::counter) + 1) / 2,
+                            status_description(status_i).c_str(), stacked_stasis);
+#endif
+                    }
+                }
+            }
+            status->m_protected_stasis = stacked_stasis;
+#ifndef NDEBUG
+            if (stacked_stasis > 0)
+            {
+                _DEBUG_MSG(1, "%s gains %u stasis protection\n",
+                status_description(status).c_str(), stacked_stasis);
+            }
+#endif
+            // no more stasis for current faction: do unmark (if no Passive BGE Megamorphosis)
+            if (__builtin_expect(!bge_megamorphosis, true) && __builtin_expect(!stacked_stasis, false))
+			{
+				fd->tap->stasis_faction_bitmap &= ~played_faction_mask;
+				_DEBUG_MSG(1, "- Stasis [%s]: no more units with stasis\n",
+                faction_names[card->m_faction].c_str());
+            }
+				
+		}	
         // resolve On-Play skills
         for (const auto& ss: card->m_skills_on_play)
         {
@@ -710,10 +901,6 @@ struct PlayCard
         _DEBUG_MSG(1, "%s plays %s %u [%s]\n",
             status_description(actor_status).c_str(), cardtype_names[type].c_str(),
             static_cast<unsigned>(storage->size() - 1), card_description(fd->cards, card).c_str());
-        if (status->m_delay == 0)
-        {
-            check_and_perform_valor(fd, status);
-        }
     }
 };
 // assault
@@ -763,12 +950,14 @@ inline bool skill_check<Skill::overload>(Field* fd, CardStatus* c, CardStatus* r
 template<>
 inline bool skill_check<Skill::jam>(Field* fd, CardStatus* c, CardStatus* ref)
 {
+    if(__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::ironwill], false) && c->has_skill(Skill::armor))return false;
     // active player performs Jam
     if (fd->tapi == ref->m_player)
     { return is_active_next_turn(c); }
 
+	
     // inactive player performs Jam
-    return is_active(c) && (c->m_step == CardStep::none);
+    return will_activate_this_turn(c);
 }
 
 template<>
@@ -813,6 +1002,28 @@ inline bool skill_check<Skill::drain>(Field* fd, CardStatus* c, CardStatus* ref)
     return can_be_healed(c);
 }
 
+unsigned remove_absorption(Field* fd, CardStatus* status, unsigned dmg)
+{
+	unsigned remaining_dmg(dmg);
+	if(__builtin_expect(status->m_absorption == 0,true))
+	{
+		//skip
+	}
+	else if(dmg > status->m_absorption)
+	{
+		_DEBUG_MSG(1, "%s absorbs %u damage\n", status_description(status).c_str(), status->m_absorption);
+		remaining_dmg = dmg - status->m_absorption;
+		status->m_absorption = 0;
+	}
+	else
+	{
+		_DEBUG_MSG(1, "%s absorbs %u damage\n", status_description(status).c_str(), dmg);
+		status->m_absorption -= dmg;
+		remaining_dmg = 0;
+	}
+	return remaining_dmg;
+}
+
 void remove_hp(Field* fd, CardStatus* status, unsigned dmg)
 {
     if (__builtin_expect(!dmg, false)) { return; }
@@ -841,6 +1052,7 @@ void remove_hp(Field* fd, CardStatus* status, unsigned dmg)
         _DEBUG_ASSERT(status->m_card->m_type != CardType::commander);
         fd->killed_units.push_back(status);
         ++fd->players[status->m_player]->total_cards_destroyed;
+	if(!status->m_summoned)++fd->players[status->m_player]->total_nonsummon_cards_destroyed;
         if (__builtin_expect((status->m_player == 0) && (fd->players[0]->deck->vip_cards.count(status->m_card->m_id)), false))
         {
             fd->players[0]->commander.m_hp = 0;
@@ -886,6 +1098,9 @@ void turn_start_phase(Field* fd)
 {
     // Active player's commander card:
     cooldown_skills(&fd->tap->commander);
+    //grab structs before new one get summoned
+    auto& structures(fd->tap->structures);     
+    unsigned end(structures.size());
     // Active player's assault cards:
     // update index
     // reduce delay; reduce skill cooldown
@@ -895,6 +1110,12 @@ void turn_start_phase(Field* fd)
         {
             CardStatus * status = &assaults[index];
             status->m_index = index;
+	    //refresh absorb
+            if(status->has_skill(Skill::absorb))
+	    {
+		status->m_absorption = status->skill_base_value(Skill::absorb);
+	    }
+	    check_and_perform_bravery(fd,status);
             if (status->m_delay > 0)
             {
                 _DEBUG_MSG(1, "%s reduces its timer\n", status_description(status).c_str());
@@ -902,7 +1123,7 @@ void turn_start_phase(Field* fd)
                 if (status->m_delay == 0)
                 {
                     check_and_perform_valor(fd, status);
-                    check_and_perform_summon(fd, status);
+                    if(status->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate)check_and_perform_summon(fd, status);
                 }
             }
             else
@@ -915,18 +1136,22 @@ void turn_start_phase(Field* fd)
     // update index
     // reduce delay; reduce skill cooldown
     {
-        auto& structures(fd->tap->structures);
-        for(unsigned index(0), end(structures.size()); index < end; ++index)
+        for(unsigned index(0); index < end; ++index)
         {
             CardStatus * status = &structures[index];
             status->m_index = index;
+	    //refresh absorb
+            if(status->has_skill(Skill::absorb))
+	    {
+		status->m_absorption = status->skill_base_value(Skill::absorb);
+	    }
             if (status->m_delay > 0)
             {
                 _DEBUG_MSG(1, "%s reduces its timer\n", status_description(status).c_str());
                 --status->m_delay;
                 if (status->m_delay == 0)
                 {
-                    check_and_perform_summon(fd, status);
+                    if(status->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate)check_and_perform_summon(fd, status);
                 }
             }
             else
@@ -1011,7 +1236,8 @@ void turn_end_phase(Field* fd)
             }
             if (status.m_poisoned > 0)
             {
-                unsigned poison_dmg = safe_minus(status.m_poisoned + status.m_enfeebled, status.protected_value());
+				unsigned poison_dmg = remove_absorption(fd,&status,status.m_poisoned + status.m_enfeebled);
+                poison_dmg = safe_minus(poison_dmg, status.protected_value());
                 if (poison_dmg > 0)
                 {
 #ifndef NQUEST
@@ -1050,10 +1276,13 @@ void turn_end_phase(Field* fd)
 //---------------------- $50 attack by assault card implementation -------------
 // Counter damage dealt to the attacker (att) by defender (def)
 // pre-condition: only valid if m_card->m_counter > 0
+
+
 inline unsigned counter_damage(Field* fd, CardStatus* att, CardStatus* def)
 {
     _DEBUG_ASSERT(att->m_card->m_type == CardType::assault);
-    return safe_minus(def->skill(Skill::counter) + att->m_enfeebled, att->protected_value());
+	
+    return safe_minus(remove_absorption(fd,att,def->skill(Skill::counter) + att->m_enfeebled), att->protected_value());
 }
 
 inline CardStatus* select_first_enemy_wall(Field* fd)
@@ -1104,18 +1333,33 @@ struct PerformAttack
         unsigned pre_modifier_dmg = att_status->attack_power();
 
         // Evaluation order:
+	// check flying
         // modify damage
         // deal damage
-        // assaults only: (poison)
+        // assaults only: (poison,inihibit, sabotage)
+	// on-attacked skills
         // counter, berserk
         // assaults only: (leech if still alive)
+	// bge
+	// subdue
+	
+	if(__builtin_expect(def_status->has_skill(Skill::flying),false) && fd->flip()) {
+		_DEBUG_MSG(1, "%s flies away from %s\n",
+                	status_description(def_status).c_str(),
+                	status_description(att_status).c_str());
+		return 0;
+	}
 
         modify_attack_damage<def_cardtype>(pre_modifier_dmg);
-        if (!att_dmg) { return 0; }
+        if (!att_dmg) { on_attacked<def_cardtype>();return 0; }
 
         attack_damage<def_cardtype>();
+		
         if (__builtin_expect(fd->end, false)) { return att_dmg; }
         damage_dependant_pre_oa<def_cardtype>();
+		
+		on_attacked<def_cardtype>();
+		
 
         // Enemy Skill: Counter
         if (def_status->has_skill(Skill::counter))
@@ -1199,7 +1443,7 @@ struct PerformAttack
         // Passive BGE: Heroism
         unsigned valor_value;
         if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::heroism], false)
-            && ((valor_value = att_status->skill(Skill::valor)) > 0)
+            && ((valor_value = att_status->skill(Skill::valor) + att_status->skill(Skill::bravery)) > 0)
             && !att_status->m_sundered
             && (def_cardtype == CardType::assault) && (def_status->m_hp <= 0))
         {
@@ -1237,7 +1481,12 @@ struct PerformAttack
                 status_description(def_status).c_str(),
                 status_description(att_status).c_str(), subdue_value);
             att_status->m_subdued += subdue_value;
-            if (att_status->m_hp > att_status->max_hp())
+			//fix negative attack
+			if(att_status->calc_attack_power()<0)
+			{
+				att_status->m_temp_attack_buff -= att_status->calc_attack_power();
+			}
+			if (att_status->m_hp > att_status->max_hp())
             {
                 _DEBUG_MSG(1, "%s loses %u HP due to subdue (max hp: %u)\n",
                     status_description(att_status).c_str(),
@@ -1263,6 +1512,7 @@ struct PerformAttack
         auto& att_assaults = fd->tap->assaults; // (active) attacker assaults
         auto& def_assaults = fd->tip->assaults; // (inactive) defender assaults
         unsigned legion_value = 0;
+		unsigned coalition_value = 0;
 
         // Enhance damage (if additional damage isn't prevented)
         if (! att_status->m_sundered)
@@ -1298,7 +1548,7 @@ struct PerformAttack
                 }
                 _DEBUG_ASSERT(factions_bitmap);
                 unsigned uniq_factions = byte_bits_count(factions_bitmap);
-                unsigned coalition_value = coalition_base * uniq_factions;
+                coalition_value = coalition_base * uniq_factions;
 #ifndef NDEBUG
                 if (debug_print > 0) { desc += "+" + to_string(coalition_value) + "(coalition/x" + to_string(uniq_factions) + ")"; }
 #endif
@@ -1404,6 +1654,15 @@ struct PerformAttack
                 status_description(att_status).c_str(), legion_value);
             att_status->add_hp(legion_value);
         }
+		
+		// Passive BGE: Unity
+        if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::unity] && coalition_value, false)
+            && can_be_healed(att_status))
+        {
+            _DEBUG_MSG(1, "Unity: %s heals itself for %u\n",
+                status_description(att_status).c_str(), (coalition_value + 1)/2);
+            att_status->add_hp((coalition_value + 1)/2);
+        }
     }
 
     template<enum CardType::CardType>
@@ -1414,6 +1673,19 @@ struct PerformAttack
         resolve_skill(fd);
     }
 
+    template<enum CardType::CardType>
+    void on_attacked() {		
+        //APN
+        // resolve On-Attacked skills
+        for (const auto& ss: def_status->m_card->m_skills_on_attacked)
+        {
+            _DEBUG_MSG(1, "On Attacked %s: Preparing (tail) skill %s\n",
+                status_description(def_status).c_str(), skill_description(fd->cards, ss).c_str());
+            fd->skill_queue.emplace_back(def_status, ss);
+            resolve_skill(fd);
+        }
+	}
+	
     template<enum CardType::CardType>
     void damage_dependant_pre_oa() {}
 
@@ -1529,14 +1801,17 @@ bool attack_phase(Field* fd)
                 if (from_idx == host_idx) { continue; }
                 CardStatus* adj_status = &def_assaults[from_idx];
                 if (!is_alive(adj_status)) { continue; }
-                unsigned swipe_dmg = safe_minus(
-                    swipe_value + drain_value + def_status->m_enfeebled,
-                    def_status->protected_value());
-                _DEBUG_MSG(1, "%s swipes %s for %u damage\n",
+                //unsigned swipe_dmg = safe_minus(
+                //    swipe_value + drain_value + def_status->m_enfeebled,
+                //    def_status->protected_value());
+                unsigned remaining_dmg = remove_absorption(fd,adj_status,swipe_value + drain_value + adj_status->m_enfeebled);
+		remaining_dmg = safe_minus(remaining_dmg,adj_status->protected_value());
+		 _DEBUG_MSG(1, "%s swipes %s for %u damage\n",
                     status_description(att_status).c_str(),
-                    status_description(adj_status).c_str(), swipe_dmg);
-                remove_hp(fd, adj_status, swipe_dmg);
-                drain_total_dmg += swipe_dmg;
+                    status_description(adj_status).c_str(), remaining_dmg);
+		
+                remove_hp(fd, adj_status, remaining_dmg);
+                drain_total_dmg += remaining_dmg;
             }
             if (drain_value && skill_check<Skill::drain>(fd, att_status, nullptr))
             {
@@ -1639,7 +1914,7 @@ inline bool skill_predicate<Skill::mimic>(Field* fd, CardStatus* src, CardStatus
         { continue; }
 
         // skip mend for non-assault mimickers
-        if ((skill_id == Skill::mend) && (src->m_card->m_type != CardType::assault))
+        if ((skill_id == Skill::mend || skill_id == Skill::fortify) && (src->m_card->m_type != CardType::assault))
         { continue; }
 
         // enemy has at least one activation skill that can be mimicked, so enemy is eligible target for Mimic
@@ -1673,7 +1948,8 @@ inline bool skill_predicate<Skill::overload>(Field* fd, CardStatus* src, CardSta
         { return true; }
 
         // unit with an activation helpful skill is valid target only when there are inhibited units
-        if ((evolved_skill_id != Skill::mend)
+	// TODO check mend/fortify valid overload target?!?
+        if ((evolved_skill_id != Skill::mend && evolved_skill_id != Skill::fortify)
             && is_activation_helpful_skill(evolved_skill_id)
             && __builtin_expect(!inhibited_searched, true))
         {
@@ -1720,14 +1996,17 @@ inline bool skill_predicate<Skill::rush>(Field* fd, CardStatus* src, CardStatus*
 template<>
 inline bool skill_predicate<Skill::weaken>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
+    if(__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::ironwill], false) && dst->has_skill(Skill::armor))return false;
     if (!dst->attack_power()) { return false; }
 
     // active player performs Weaken (normal case)
     if (__builtin_expect((fd->tapi == src->m_player), true))
     { return is_active_next_turn(dst); }
 
+    // APN - On-Attacked/Death don't target the attacking card  
+	
     // inactive player performs Weaken (inverted case (on-death activation))
-    return is_active(dst) && !has_attacked(dst);
+    return will_activate_this_turn(dst);
 }
 
 template<>
@@ -1793,15 +2072,21 @@ inline void perform_skill<Skill::mend>(Field* fd, CardStatus* src, CardStatus* d
 }
 
 template<>
+inline void perform_skill<Skill::fortify>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
+{
+    dst->ext_hp(s.x);
+}
+template<>
 inline void perform_skill<Skill::mortar>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
     if (dst->m_card->m_type == CardType::structure)
     {
-        remove_hp(fd, dst, s.x);
+        remove_hp(fd, dst, remove_absorption(fd,dst,s.x));
     }
     else
     {
-        unsigned strike_dmg = safe_minus((s.x + 1) / 2 + dst->m_enfeebled, src->m_overloaded ? 0 : dst->protected_value());
+		unsigned strike_dmg = remove_absorption(fd,dst,(s.x + 1) / 2 + dst->m_enfeebled);
+        strike_dmg = safe_minus(strike_dmg, src->m_overloaded ? 0 : dst->protected_value());
         remove_hp(fd, dst, strike_dmg);
     }
 }
@@ -1853,20 +2138,21 @@ inline void perform_skill<Skill::rush>(Field* fd, CardStatus* src, CardStatus* d
     if (dst->m_delay == 0)
     {
         check_and_perform_valor(fd, dst);
-        check_and_perform_summon(fd, dst);
+        if(dst->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate)check_and_perform_summon(fd, dst);
     }
 }
 
 template<>
 inline void perform_skill<Skill::siege>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
-    remove_hp(fd, dst, s.x);
+    remove_hp(fd, dst, remove_absorption(fd,dst,s.x));
 }
 
 template<>
 inline void perform_skill<Skill::strike>(Field* fd, CardStatus* src, CardStatus* dst, const SkillSpec& s)
 {
-    unsigned strike_dmg = safe_minus(s.x + dst->m_enfeebled, src->m_overloaded ? 0 : dst->protected_value());
+	unsigned strike_dmg = remove_absorption(fd,dst,s.x+ dst->m_enfeebled);
+    strike_dmg = safe_minus(strike_dmg , src->m_overloaded ? 0 : dst->protected_value());
     remove_hp(fd, dst, strike_dmg);
 }
 
@@ -1900,7 +2186,7 @@ inline void perform_skill<Skill::mimic>(Field* fd, CardStatus* src, CardStatus* 
         { continue; }
 
         // skip mend for non-assault mimickers
-        if ((skill_id == Skill::mend) && (src->m_card->m_type != CardType::assault))
+        if ((skill_id == Skill::mend || skill_id == Skill::fortify) && (src->m_card->m_type != CardType::assault))
         { continue; }
 
         mimickable_skills.emplace_back(&ss);
@@ -1969,6 +2255,28 @@ inline unsigned select_fast<Skill::mend>(Field* fd, CardStatus* src, const std::
     return fd->selection_array.size();
 }
 
+template<>
+inline unsigned select_fast<Skill::fortify>(Field* fd, CardStatus* src, const std::vector<CardStatus*>& cards, const SkillSpec& s)
+{
+    fd->selection_array.clear();
+    bool critical_reach = fd->bg_effects[fd->tapi][PassiveBGE::criticalreach];
+    auto& assaults = fd->players[src->m_player]->assaults;
+    unsigned adj_size = 1 + (unsigned)(critical_reach);
+    unsigned host_idx = src->m_index;
+    unsigned from_idx = safe_minus(host_idx, adj_size);
+    unsigned till_idx = std::min(host_idx + adj_size, safe_minus(assaults.size(), 1));
+    for (; from_idx <= till_idx; ++ from_idx)
+    {
+        if (from_idx == host_idx) { continue; }
+        CardStatus* adj_status = &assaults[from_idx];
+        if (!is_alive(adj_status)) { continue; }
+        if (skill_predicate<Skill::fortify>(fd, src, adj_status, s))
+        {
+            fd->selection_array.push_back(adj_status);
+        }
+    }
+    return fd->selection_array.size();
+}
 inline std::vector<CardStatus*>& skill_targets_hostile_assault(Field* fd, CardStatus* src)
 {
     return(fd->players[opponent(src->m_player)]->assaults.m_indirect);
@@ -2012,6 +2320,9 @@ template<> std::vector<CardStatus*>& skill_targets<Skill::jam>(Field* fd, CardSt
 { return(skill_targets_hostile_assault(fd, src)); }
 
 template<> std::vector<CardStatus*>& skill_targets<Skill::mend>(Field* fd, CardStatus* src)
+{ return(skill_targets_allied_assault(fd, src)); }
+
+template<> std::vector<CardStatus*>& skill_targets<Skill::fortify>(Field* fd, CardStatus* src)
 { return(skill_targets_allied_assault(fd, src)); }
 
 template<> std::vector<CardStatus*>& skill_targets<Skill::overload>(Field* fd, CardStatus* src)
@@ -2132,6 +2443,38 @@ bool check_and_perform_valor(Field* fd, CardStatus* src)
     return false;
 }
 
+bool check_and_perform_bravery(Field* fd, CardStatus* src)
+{
+    unsigned bravery_value = src->skill(Skill::bravery);
+    if (bravery_value && !src->m_sundered && skill_check<Skill::bravery>(fd, src, nullptr))
+    {
+        unsigned opponent_player = opponent(src->m_player);
+        const CardStatus * dst = fd->players[opponent_player]->assaults.size() > src->m_index ?
+            &fd->players[opponent_player]->assaults[src->m_index] :
+            nullptr;
+        if (dst == nullptr || dst->m_hp <= 0)
+        {
+            _DEBUG_MSG(1, "%s loses Bravery (no blocker)\n", status_description(src).c_str());
+            return false;
+        }
+        else if (dst->attack_power() <= src->attack_power())
+        {
+            _DEBUG_MSG(1, "%s loses Bravery (weak blocker %s)\n", status_description(src).c_str(), status_description(dst).c_str());
+            return false;
+        }
+#ifndef NQUEST
+        if (src->m_player == 0)
+        {
+            fd->inc_counter(QuestType::skill_use, Skill::bravery);
+        }
+#endif
+        _DEBUG_MSG(1, "%s activates Bravery %u\n", status_description(src).c_str(), bravery_value);
+        src->m_perm_attack_buff += bravery_value;
+        return true;
+    }
+    return false;
+}
+
 CardStatus* check_and_perform_summon(Field* fd, CardStatus* src)
 {
     unsigned summon_card_id = src->m_card->m_skill_value[Skill::summon];
@@ -2139,12 +2482,15 @@ CardStatus* check_and_perform_summon(Field* fd, CardStatus* src)
     {
         const Card* summoned_card(fd->cards.by_id(summon_card_id));
         _DEBUG_MSG(1, "%s summons %s\n", status_description(src).c_str(), summoned_card->m_name.c_str());
+	CardStatus* summoned_status = nullptr;
         switch (summoned_card->m_type)
         {
         case CardType::assault:
-            return PlayCard(summoned_card, fd, src->m_player, src).op<CardType::assault>();
+            summoned_status = PlayCard(summoned_card, fd, src->m_player, src).op<CardType::assault>(true);
+	    return summoned_status;
         case CardType::structure:
-            return PlayCard(summoned_card, fd, src->m_player, src).op<CardType::structure>();
+            summoned_status = PlayCard(summoned_card, fd, src->m_player, src).op<CardType::structure>(true);
+	    return summoned_status;
         default:
             _DEBUG_MSG(0, "Unknown card type: #%u %s: %u\n",
                 summoned_card->m_id, card_description(fd->cards, summoned_card).c_str(),
@@ -2188,7 +2534,7 @@ size_t select_targets(Field* fd, CardStatus* src, const SkillSpec& s)
 
         // analyze targets count / skill
         unsigned n_targets = s.n > 0 ? s.n : 1;
-        if (s.all || n_targets >= n_candidates || skill_id == Skill::mend)  // target all or mend
+        if (s.all || n_targets >= n_candidates || skill_id == Skill::mend || skill_id == Skill::fortify)  // target all or mend
         { break; }
 
         // shuffle & trim
@@ -2497,6 +2843,11 @@ inline unsigned evaluate_brawl_score(Field* fd, unsigned player)
         - (unsigned)((fd->turn+7)/8);
 }
 
+inline unsigned evaluate_war_score(Field* fd, unsigned player)
+{
+	return 208 - ((unsigned)(fd->turn)/2)*4;
+}
+
 //------------------------------------------------------------------------------
 Results<uint64_t> play(Field* fd)
 {
@@ -2516,7 +2867,22 @@ Results<uint64_t> play(Field* fd)
         { PlayCard(fd->players[ai]->deck->alpha_dominion, fd, ai, &fd->players[ai]->commander).op<CardType::structure>(); }
         for (const Card* played_card: fd->players[ai]->deck->shuffled_forts)
         {
-            PlayCard(played_card, fd, ai, &fd->players[ai]->commander).op<CardType::structure>();
+            
+			switch (played_card->m_type)
+            {
+            case CardType::assault:
+                PlayCard(played_card, fd, ai, &fd->players[ai]->commander).op<CardType::assault>();
+                break;
+            case CardType::structure:
+                PlayCard(played_card, fd, ai, &fd->players[ai]->commander).op<CardType::structure>();
+                break;
+            case CardType::commander:
+            case CardType::num_cardtypes:
+                _DEBUG_MSG(0, "Unknown card type: #%u %s: %u\n",
+                    played_card->m_id, card_description(fd->cards, played_card).c_str(), played_card->m_type);
+                assert(false);
+                break;
+            }
         }
         std::swap(fd->tapi, fd->tipi);
         std::swap(fd->tap, fd->tip);
@@ -2536,27 +2902,25 @@ Results<uint64_t> play(Field* fd)
         resolve_skill(fd); // resolve postponed skills recursively
         fd->finalize_action();
 
-        bool bge_megamorphosis = fd->bg_effects[fd->tapi][PassiveBGE::megamorphosis];
+        //bool bge_megamorphosis = fd->bg_effects[fd->tapi][PassiveBGE::megamorphosis];
 
         // Play a card
         const Card* played_card(fd->tap->deck->next());
         if (played_card)
         {
-            unsigned played_faction_mask(0);
-            unsigned same_faction_cards_count(0);
 
             // Begin 'Play Card' phase action
             fd->prepare_action();
 
             // Play selected card
-            CardStatus* played_status = nullptr;
+            //CardStatus* played_status = nullptr;
             switch (played_card->m_type)
             {
             case CardType::assault:
-                played_status = PlayCard(played_card, fd, fd->tapi, &fd->tap->commander).op<CardType::assault>();
+                PlayCard(played_card, fd, fd->tapi, &fd->tap->commander).op<CardType::assault>();
                 break;
             case CardType::structure:
-                played_status = PlayCard(played_card, fd, fd->tapi, &fd->tap->commander).op<CardType::structure>();
+                PlayCard(played_card, fd, fd->tapi, &fd->tap->commander).op<CardType::structure>();
                 break;
             case CardType::commander:
             case CardType::num_cardtypes:
@@ -2566,149 +2930,13 @@ Results<uint64_t> play(Field* fd)
                 break;
             }
             resolve_skill(fd); // resolve postponed skills recursively
-
+			//status_description(played_status)
+			//_DEBUG_MSG(3,"Card played: %s", status_description(played_status).c_str());
             // End 'Play Card' phase action
             fd->finalize_action();
 
-            // 1. Evaluate skill Allegiance & count assaults with same faction (structures will be counted later)
-            // 2. Passive BGE Cold Sleep
-            for (CardStatus* status : fd->tap->assaults.m_indirect)
-            {
-                if (status == played_status) { continue; } // except itself
-                _DEBUG_ASSERT(is_alive(status));
-                if (bge_megamorphosis || (status->m_card->m_faction == played_card->m_faction))
-                {
-                    ++ same_faction_cards_count;
-                    unsigned allegiance_value = status->skill(Skill::allegiance);
-                    if (__builtin_expect(allegiance_value, false))
-                    {
-                        _DEBUG_MSG(1, "%s activates Allegiance %u\n", status_description(status).c_str(), allegiance_value);
-                        if (! status->m_sundered)
-                        { status->m_perm_attack_buff += allegiance_value; }
-                        status->ext_hp(allegiance_value);
-                    }
-                }
-                if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::coldsleep], false)
-                    && status->m_protected_stasis && can_be_healed(status))
-                {
-                    unsigned bge_value = (status->m_protected_stasis + 1) / 2;
-                    _DEBUG_MSG(1, "Cold Sleep: %s heals itself for %u\n", status_description(status).c_str(), bge_value);
-                    status->add_hp(bge_value);
-                }
-            }
-
-            // Setup faction marks (bitmap) for stasis (skill Stasis / Passive BGE TemporalBacklash)
-            // unless Passive BGE Megamorphosis is enabled
-            if (__builtin_expect(!bge_megamorphosis, true))
-            {
-                played_faction_mask = (1u << played_card->m_faction);
-
-                // do played card have stasis? mark this faction for stasis check
-                if (__builtin_expect(played_status->skill(Skill::stasis), false)
-                    || __builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::temporalbacklash] && played_status->skill(Skill::counter), false))
-                {
-                    fd->tap->stasis_faction_bitmap |= played_faction_mask;
-                }
-            }
-
-            // Evaluate Passive BGE Oath-of-Loyalty
-            unsigned allegiance_value;
-            if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::oath_of_loyalty], false)
-                && ((allegiance_value = played_status->skill(Skill::allegiance)) > 0))
-            {
-                // count structures with same faction (except fortresses, dominions and other non-normal structures)
-                for (CardStatus * status : fd->tap->structures.m_indirect)
-                {
-                    if ((status->m_card->m_category == CardCategory::normal)
-                        && (bge_megamorphosis || (status->m_card->m_faction == played_card->m_faction)))
-                    {
-                        ++ same_faction_cards_count;
-                    }
-                }
-
-                // apply Passive BGE Oath-of-Loyalty when multiplier isn't zero
-                if (same_faction_cards_count)
-                {
-                    unsigned bge_value = allegiance_value * same_faction_cards_count;
-                    _DEBUG_MSG(1, "Oath of Loyalty: %s activates Allegiance %u x %u = %u\n",
-                        status_description(played_status).c_str(), allegiance_value, same_faction_cards_count, bge_value);
-                    played_status->m_perm_attack_buff += bge_value;
-                    played_status->ext_hp(bge_value);
-                }
-            }
-
-            // summarize stasis when:
-            //  1. Passive BGE Megamorphosis is enabled
-            //  2. current faction is marked for it
-            if ((played_card->m_delay > 0) && (played_card->m_type == CardType::assault)
-                && __builtin_expect(bge_megamorphosis || (fd->tap->stasis_faction_bitmap & played_faction_mask), false))
-            {
-                unsigned stacked_stasis = (bge_megamorphosis || (fd->tap->commander.m_card->m_faction == played_card->m_faction))
-                    ? fd->tap->commander.skill(Skill::stasis)
-                    : 0u;
-#ifndef NDEBUG
-                if (stacked_stasis > 0)
-                {
-                    _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
-                        faction_names[played_card->m_faction].c_str(), stacked_stasis,
-                        status_description(&fd->tap->commander).c_str(), stacked_stasis);
-                }
-#endif
-                for (CardStatus * status : fd->tap->structures.m_indirect)
-                {
-                    if (bge_megamorphosis || (status->m_card->m_faction == played_card->m_faction))
-                    {
-                        stacked_stasis += status->skill(Skill::stasis);
-#ifndef NDEBUG
-                        if (status->skill(Skill::stasis) > 0)
-                        {
-                            _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
-                                faction_names[played_card->m_faction].c_str(), status->skill(Skill::stasis),
-                                status_description(status).c_str(), stacked_stasis);
-                        }
-#endif
-                    }
-                }
-                for (CardStatus * status : fd->tap->assaults.m_indirect)
-                {
-                    if (bge_megamorphosis || (status->m_card->m_faction == played_card->m_faction))
-                    {
-                        stacked_stasis += status->skill(Skill::stasis);
-#ifndef NDEBUG
-                        if (status->skill(Skill::stasis) > 0)
-                        {
-                            _DEBUG_MSG(2, "+ Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
-                                faction_names[played_card->m_faction].c_str(), status->skill(Skill::stasis),
-                                status_description(status).c_str(), stacked_stasis);
-                        }
-#endif
-                        if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::temporalbacklash] && status->skill(Skill::counter), false))
-                        {
-                            stacked_stasis += (status->skill(Skill::counter) + 1) / 2;
-#ifndef NDEBUG
-                            _DEBUG_MSG(2, "Temporal Backlash: + Stasis [%s]: stacks +%u stasis protection from %s (total stacked: %u)\n",
-                                faction_names[played_card->m_faction].c_str(), (status->skill(Skill::counter) + 1) / 2,
-                                status_description(status).c_str(), stacked_stasis);
-#endif
-                        }
-                    }
-                }
-                played_status->m_protected_stasis = stacked_stasis;
-#ifndef NDEBUG
-                if (stacked_stasis > 0)
-                {
-                    _DEBUG_MSG(1, "%s gains %u stasis protection\n",
-                        status_description(played_status).c_str(), stacked_stasis);
-                }
-#endif
-                // no more stasis for current faction: do unmark (if no Passive BGE Megamorphosis)
-                if (__builtin_expect(!bge_megamorphosis, true) && __builtin_expect(!stacked_stasis, false))
-                {
-                    fd->tap->stasis_faction_bitmap &= ~played_faction_mask;
-                    _DEBUG_MSG(1, "- Stasis [%s]: no more units with stasis\n",
-                        faction_names[played_card->m_faction].c_str());
-                }
-            }
+            
+            
         }
         if (__builtin_expect(fd->end, false)) { break; }
 
@@ -2717,7 +2945,7 @@ Results<uint64_t> play(Field* fd)
         {
             for (CardStatus * dst: fd->tap->assaults.m_indirect)
             {
-                unsigned bge_value = (dst->skill(Skill::valor) + 1) / 2;
+                unsigned bge_value = (dst->skill(Skill::valor) + dst->skill(Skill::bravery)+ 1) / 2;
                 if (bge_value <= 0)
                 { continue; }
                 SkillSpec ss_protect{Skill::protect, bge_value, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, false, 0,};
@@ -2903,12 +3131,19 @@ Results<uint64_t> play(Field* fd)
         switch (fd->optimization_mode)
         {
         case OptimizationMode::raid: return {0, 0, 1, (points_score_type)raid_damage};
-        case OptimizationMode::brawl: return {0, 0, 1, 5};
+        case OptimizationMode::brawl: return {0, 0, 1, (points_score_type) 5};
         case OptimizationMode::brawl_defense:
             {
                 unsigned enemy_brawl_score = evaluate_brawl_score(fd, 1);
                 unsigned max_score = max_possible_score[(size_t)OptimizationMode::brawl_defense];
                 return {0, 0, 1, (points_score_type)(max_score - enemy_brawl_score)};
+            }
+		case OptimizationMode::war: return {0,0,1, (points_score_type) 20};
+        case OptimizationMode::war_defense:
+            {
+                unsigned enemy_war_score = evaluate_war_score(fd, 1);
+                unsigned max_score = max_possible_score[(size_t)OptimizationMode::war_defense];
+                return {0, 0, 1, (points_score_type)(max_score - enemy_war_score)};
             }
 #ifndef NQUEST
         case OptimizationMode::quest: return {0, 0, 1, (points_score_type)(fd->quest.must_win ? 0 : quest_score)};
@@ -2936,8 +3171,19 @@ Results<uint64_t> play(Field* fd)
         case OptimizationMode::campaign:
             {
                 unsigned total_dominions_destroyed = (p[0]->deck->alpha_dominion != nullptr) - p[0]->structures.count(is_it_dominion);
-                unsigned campaign_score = 100 - 10 * (p[0]->total_cards_destroyed - total_dominions_destroyed);
+                unsigned campaign_score = 100 - 10 * (p[0]->total_nonsummon_cards_destroyed - total_dominions_destroyed);
                 return {1, 0, 0, (points_score_type)campaign_score};
+            }
+		case OptimizationMode::war: 
+			{
+                unsigned war_score = evaluate_war_score(fd, 0);
+				return {1,0,0, (points_score_type) war_score};
+			}
+        case OptimizationMode::war_defense:
+            {
+                unsigned max_score = max_possible_score[(size_t)OptimizationMode::war_defense];
+                unsigned min_score = min_possible_score[(size_t)OptimizationMode::war_defense];
+                return {1, 0, 0, (points_score_type)(max_score - min_score)};
             }
 #ifndef NQUEST
         case OptimizationMode::quest: return {1, 0, 0, (points_score_type)(fd->quest.win_score + quest_score)};
@@ -2958,6 +3204,13 @@ Results<uint64_t> play(Field* fd)
             {
                 unsigned max_score = max_possible_score[(size_t)OptimizationMode::brawl_defense];
                 unsigned min_score = min_possible_score[(size_t)OptimizationMode::brawl_defense];
+                return {1, 0, 0, (points_score_type)(max_score - min_score)};
+            }
+		case OptimizationMode::war: return {0,1,0, (points_score_type) 20};
+        case OptimizationMode::war_defense:
+            {
+                unsigned max_score = max_possible_score[(size_t)OptimizationMode::war_defense];
+                unsigned min_score = min_possible_score[(size_t)OptimizationMode::war_defense];
                 return {1, 0, 0, (points_score_type)(max_score - min_score)};
             }
 #ifndef NQUEST
@@ -2982,6 +3235,7 @@ void fill_skill_table()
     skill_table[Skill::heal] = perform_targetted_allied_fast<Skill::heal>;
     skill_table[Skill::jam] = perform_targetted_hostile_fast<Skill::jam>;
     skill_table[Skill::mend] = perform_targetted_allied_fast<Skill::mend>;
+    skill_table[Skill::fortify] = perform_targetted_allied_fast<Skill::fortify>;
     skill_table[Skill::overload] = perform_targetted_allied_fast<Skill::overload>;
     skill_table[Skill::protect] = perform_targetted_allied_fast<Skill::protect>;
     skill_table[Skill::rally] = perform_targetted_allied_fast<Skill::rally>;

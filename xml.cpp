@@ -293,6 +293,8 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
     { // inherit no skill if there is skill node
         card->m_skills.clear();
         card->m_skills_on_play.clear();
+	//APN
+	card->m_skills_on_attacked.clear();
         card->m_skills_on_death.clear();
         memset(card->m_skill_value, 0, sizeof card->m_skill_value);
         memset(card->m_skill_trigger, 0, sizeof card->m_skill_trigger);

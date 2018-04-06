@@ -7,5 +7,11 @@ data/cards_section_*.xml
 data/fusion_recipes_cj2.xml
 data/missions.xml
 data/skills_set.xml
+data/levels.xml
 tuo
 tuodebug
+test/**
+data/customdecks.txt
+data/ownedcards.txt
+out.txt
+

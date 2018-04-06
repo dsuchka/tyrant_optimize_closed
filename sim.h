@@ -156,9 +156,11 @@ struct CardStatus
 {
     const Card* m_card;
     unsigned m_index;
+	unsigned m_action_index;
     unsigned m_player;
     unsigned m_delay;
     unsigned m_hp;
+	unsigned m_absorption;
     CardStep m_step;
     unsigned m_perm_health_buff;
     unsigned m_perm_attack_buff;
@@ -188,6 +190,7 @@ struct CardStatus
     bool m_overloaded;
     bool m_rush_attempted;
     bool m_sundered;
+    bool m_summoned;
 
     CardStatus() {}
 
@@ -200,6 +203,7 @@ struct CardStatus
     inline unsigned enhanced(Skill::Skill skill) const;
     inline unsigned protected_value() const;
     inline unsigned attack_power() const;
+	inline signed calc_attack_power() const;
     inline unsigned max_hp() const;
     inline unsigned add_hp(unsigned value);
     inline unsigned ext_hp(unsigned value);
@@ -216,7 +220,8 @@ public:
         assaults(15),
         structures(15),
         stasis_faction_bitmap(0),
-        total_cards_destroyed(0)
+        total_cards_destroyed(0),
+	total_nonsummon_cards_destroyed(0)
     {
     }
 
@@ -228,6 +233,7 @@ public:
     Storage<CardStatus> structures;
     unsigned stasis_faction_bitmap;
     unsigned total_cards_destroyed;
+    unsigned total_nonsummon_cards_destroyed;
 };
 
 #ifndef NQUEST
@@ -377,7 +383,9 @@ extern std::string card_name_by_id_safe(const Cards& cards, const unsigned card_
 template<typename x_type>
 inline std::string skill_description(const Cards& cards, const _SkillSpec<x_type>& s, Skill::Trigger trig)
 {
+    //APN
     return ((trig == Skill::Trigger::play) ? "(On Play)" :
+            (trig == Skill::Trigger::attacked) ? "(On Attacked)" :
             (trig == Skill::Trigger::death) ? "(On Death)" : "") +
         skill_names[s.id] +
         (s.card_id == 0 ? "" : " " + card_name_by_id_safe(cards, s.card_id) + " id[" + to_string(s.card_id) + "]") +

@@ -3,7 +3,18 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
-BGEffects := "none|Cold-Sleep|Blood-Vengeance|Oath-of-Loyalty|Furiosity|TemporalBacklash|CriticalReach|Devour|HaltedOrders|ZealotsPreservation|Virulence|Enfeeble all X|Enhance all S X|Evolve n S1 S2|Heal all X|Mortar X|Protect all X|Rally all X|Siege all X|Strike all X|Weaken all X|Brigade|Bloodlust X|Counterflux|Divert|EnduringRage|Fortification|Heroism|Metamorphosis|Megamorphosis|Revenge X|TurningTides"
+VersionOfStarter := "v2.58.10"
+
+VersionOfTUO := ""
+file = %A_temp%\version.tmp
+RunWait, %comspec% /c "tuo.exe -version > %file%",, Hide
+FileReadLine,VersionOfTUO,%file%,1
+;VersionOfTUO := SubStr(VersionOfTUO, 28)
+FileDelete, %file%
+
+MaxCardsSections := 100
+
+BGEffects := "none|Unity|Iron-Will|Cold-Sleep|Blood-Vengeance|Oath-of-Loyalty|Furiosity|TemporalBacklash|CriticalReach|Devour|HaltedOrders|ZealotsPreservation|Virulence|Enfeeble all X|Enhance all S X|Evolve n S1 S2|Heal all X|Mortar X|Protect all X|Rally all X|Siege all X|Strike all X|Weaken all X|Brigade|Bloodlust X|Counterflux|Divert|EnduringRage|Fortification|Heroism|Metamorphosis|Megamorphosis|Revenge X|TurningTides"
 IniFileName := "data\SimpleTUOptimizeStarter.ini"
 IniSection := "onLoad"
 
@@ -15,13 +26,17 @@ IniRead, IniVIP, %IniFileName%, %IniSection%, VIP, %A_Space%
 IniRead, IniIterations, %IniFileName%, %IniSection%, Iterations, 10000
 IniRead, IniThreads, %IniFileName%, %IniSection%, Threads, 4
 IniRead, IniSimOptions, %IniFileName%, %IniSection%, SimOptions, %A_Space%
-IniRead, IniEffect, %IniFileName%, %IniSection%, Effect, 1
+IniRead, IniEffect, %IniFileName%, %IniSection%, Effect, none
 IniRead, IniMode, %IniFileName%, %IniSection%, Mode, 1
 IniRead, IniOrder, %IniFileName%, %IniSection%, Order, 1
 IniRead, IniOperation, %IniFileName%, %IniSection%, Operation, 1
+IniRead, IniDominion, %IniFileName%, %IniSection%, Dominion, 1
+IniRead, IniMono, %IniFileName%, %IniSection%, Mono, 1
+IniRead, IniCommander, %IniFileName%, %IniSection%, Commander, 0
 IniRead, IniEndgame, %IniFileName%, %IniSection%, Endgame, 1
 IniRead, IniFund, %IniFileName%, %IniSection%, Fund, 0
 IniRead, Inix86, %IniFileName%, %IniSection%, x86, 0
+IniRead, Inidebug, %IniFileName%, %IniSection%, debug, 0
 
 Menu, MyMenu, Add, ownedcards.txt, MenuOwnedcards
 Menu, MyMenu, Add, customdecks.txt, MenuCustomdecks
@@ -41,6 +56,7 @@ Gui, Add, Text, r1, Quest:
 Gui, Add, Text, r1, Effect:
 Gui, Add, Text, r1, Mode:
 Gui, Add, Text, r1, Operation:
+Gui, Add, Text, r1, Dominion:
 Gui, Add, Text, r1, Flags:
 
 Gui, Add, Edit, vMyDeck ym w600 r5, %IniMyDeck%
@@ -71,30 +87,36 @@ if (IniEffectNum = 0) {
 }
 
 Gui, Add, ComboBox, vEffect xs Choose%IniEffectNum% section, %BGEffects%
-Gui, Add, DDL, altsubmit vMode Choose%IniMode%, Battle / Mission|Battle (defense)|GW / CQ / Surge|GW (defense)|Brawl|Brawl (defense)|Raid|Campaign
-Gui, Add, DDL, altsubmit vOperation Group Choose%IniOperation% xs, Climb|Sim|Reorder|Climbex
+Gui, Add, DDL, altsubmit vMode Choose%IniMode%, Battle / Mission|Battle (defense)|GW|GW (defense)|Brawl|Brawl (defense)|Raid|Campaign|CQ / Surge
+Gui, Add, DDL, altsubmit vOperation Group Choose%IniOperation% xs, Climb|Sim|Reorder|Climbex|Anneal|Debug
+Gui, Add, DDL, altsubmit vDominion Group Choose%IniDominion% xs, dom-owned|dom-maxed|dom-none
 
 Gui, Add, Text, ys, Endgame:
 Gui, Add, Text, r1, Order:
 Gui, Add, Text, r1, Iterations:
+Gui, Add, Text, r1, Monofaction:
 
 Gui, Add, DDL, altsubmit vEndgame ys Choose%IniEndgame%, none|0 - Maxed Units|1 - Maxed Fused|2 - Maxed Quads
 Gui, Add, DDL, altsubmit vOrder Group Choose%IniOrder%, Random|Ordered (honor 3-card hand)
 Gui, Add, Edit, vIterations w100 r1, %IniIterations%
+Gui, Add, DDL, altsubmit vMono Group Choose%IniMono%, none|imperial|raider|bloodthirsty|xeno|righteous|progenitor
 
 Gui, Add, Text, ys, Fund:
 Gui, Add, Text, r1,
 Gui, Add, Text, , Threads:
+;Gui, Add, Text, , Lock commander:
 
 Gui, Add, Edit, vFund number r1 ys w50, %IniFund%
 Gui, Add, Text, r1,
 Gui, Add, Edit, vThreads number w20, %IniThreads%
+Gui, Add, Checkbox, vCommander Checked%IniCommander%, Commander lock
 
 Gui, Add, Edit, vSimOptions r1 xs w600, %IniSimOptions%
 Gui, Add, Button, default r2 w100 x100 y+15 section, Simulate
 Gui, Add, Checkbox, vx86 Checked%Inix86%, x86 (32-bit)
 Gui, Add, Button, r2 w100 ys xs+200, Exit
-Gui, Show,, Simple Tyrant Unleashed Optimize Starter v2.54.2
+Gui, Add, Checkbox, vdebug Checked%IniDebug%, debug
+Gui, Show,, Simple TUO Starter %VersionOfStarter% (version of %VersionOfTUO%)
 return
 
 ButtonSimulate:
@@ -112,10 +134,10 @@ GuiControl, , Edit3, %EnemiesDeck% ; this will put the content of the variable i
 GuiControl, , Edit11, %SimOptions% ; this will put the content of the variable in the editbox (edit11 is taken by the winspy)
 Gui, Submit, NoHide ; save the changes and not hide the windows)
 
-selTUO := (x86 ? "tuo-x86" : "tuo")
-selMode := (Mode == 1 ? "pvp" : Mode == 2 ? "pvp-defense" : Mode == 3 ? "gw" : Mode == 4 ? "gw-defense" :Mode == 5 ? "brawl" : Mode == 6 ? "brawl-defense" : Mode == 7 ? "raid" : "campaign")
+selTUO := (x86 ? (debug ? "tuo-x86-debug" : "tuo-x86") : (debug ? "tuo-debug" : "tuo"))
+selMode := (Mode == 1 ? "pvp" : Mode == 2 ? "pvp-defense" : Mode == 3 ? "gw" : Mode == 4 ? "gw-defense" :Mode == 5 ? "brawl" : Mode == 6 ? "brawl-defense" : Mode == 7 ? "raid" : Mode == 8 ? "campaign" : "surge")
 selOrder := (Order == 1 ? "random" : "ordered")
-selOperation :=  (Operation == 1 ? "climb" : Operation == 2 ? "sim" : Operation == 3 ? "reorder": "climbex")
+selOperation :=  (Operation == 1 ? "climb" : Operation == 2 ? "sim" : Operation == 3 ? "reorder": Operation == 4 ? "climbex" : Operation == 5 ? "anneal" : "debug sim" )
 selMySiege := (MySiege == "" ? "" : "yf """ MySiege """ ")
 selEnemySiege := ( EnemySiege == "" ? "" : "ef """ EnemySiege """ ")
 selVIP := ( VIP == "" ? "" : "vip """ VIP """ " )
@@ -135,21 +157,24 @@ selSimOptions := ( SimOptions == "" ? "" : SimOptions " ")
 EndgameVal := Endgame -2
 selEndgame := (Endgame <= 1 ? "" : "endgame " EndgameVal " ")
 selFund := (Fund == "" ? "" : "fund " Fund " ")
-execString = %selTUO% "%MyDeck%" "%EnemiesDeck%" %selMode% %selOrder% %selMySiege%%selEnemySiege%%selVIP%%selQuest%%selEffect%%selThreads%%selEndgame%%selFund%%selSimOptions%%selOperation% %Iterations%
+selDominion := (Dominion == 3 ? "dom-none " : Dominion == 1 ? "dom-owned " : Dominion == 2 ? "dom-maxed " : "")
+selMono := (Mono == 1 ? "" : Mono == 2 ? "-m imperial " : Mono == 3 ? "-m raider " : Mono == 4 ? "-m bloodthirsty " : Mono == 5 ? "-m xeno " : Mono == 6 ? "-m righteous " : Mono == 7 ? "-m progenitor " : "")
+selCommander := (Commander ? "-c " : "")
+execString = %selTUO% "%MyDeck%" "%EnemiesDeck%" %selMode% %selOrder% %selMySiege%%selEnemySiege%%selVIP%%selQuest%%selEffect%%selThreads%%selEndgame%%selFund%%selSimOptions%%selOperation% %Iterations% %selCommander%%selDominion%%selMono%
 Run, cmd.exe /c title TUOptimizeOutput && echo %execString% && %execString% & pause
 Gui, Show
 return
 
 MenuHelp:
 Gui, Submit
-selTUO := (x86 ? "tuo-x86" : "tuo")
+selTUO := (x86 ? (debug ? "tuo-x86-debug" : "tuo-x86") : (debug ? "tuo-debug" : "tuo"))
 Run, cmd.exe /c title TUOptimizeOutput && echo %selTUO% && %selTUO% & pause
 Gui, Show
 return
 
 MenuWeb:
 Gui, Submit
-Run https://github.com/dsuchka/tyrant_optimize/releases
+Run https://github.com/APN-Pucky/tyrant_optimize/releases
 Gui, Show
 return
 
@@ -180,22 +205,20 @@ if ErrorLevel
     MsgBox, Error downloading levels.xml.
     had_error := true
 }
-Loop, 13
+Loop, %MaxCardsSections%
 {
-    UrlDownloadToFile, *0 http://mobile.tyrantonline.com/assets/cards_section_%A_Index%.xml, data\cards_section_%A_Index%.xml
-    if ErrorLevel
-    {
-        MsgBox, Error downloading cards_section_%A_Index%.xml.
-        had_error := true
-    }
+	URL = http://mobile.tyrantonline.com/assets/cards_section_%A_Index%.xml
+	CardsFile = data\cards_section_%A_Index%.xml
+	if (!DownloadCards(URL, CardsFile))
+		break
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/raids.xml, data\raids.xml
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/APN-Pucky/tyrant_optimize/merged/data/raids.xml, data\raids.xml
 if ErrorLevel
 {
     MsgBox, Error downloading raids.xml.
     had_error := true
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/bges.txt, data\bges.txt
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/APN-Pucky/tyrant_optimize/merged/data/bges.txt, data\bges.txt
 if ErrorLevel
 {
     MsgBox, Error downloading bges.txt.
@@ -233,22 +256,20 @@ if ErrorLevel
     MsgBox, Error downloading levels.xml.
     had_error := true
 }
-Loop, 13
+Loop, %MaxCardsSections%
 {
-    UrlDownloadToFile, *0 http://mobile-dev.tyrantonline.com/assets/cards_section_%A_Index%.xml, data\cards_section_%A_Index%.xml
-    if ErrorLevel
-    {
-        MsgBox, Error downloading cards_section_%A_Index%.xml.
-        had_error := true
-    }
+	URL = http://mobile-dev.tyrantonline.com/assets/cards_section_%A_Index%.xml
+	CardsFile = data\cards_section_%A_Index%.xml
+	if (!DownloadCards(URL, CardsFile))
+		break
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/raids.xml, data\raids.xml
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/APN-Pucky/tyrant_optimize/merged/data/raids.xml, data\raids.xml
 if ErrorLevel
 {
     MsgBox, Error downloading raids.xml.
     had_error := true
 }
-UrlDownloadToFile, *0 https://raw.githubusercontent.com/dsuchka/tyrant_optimize/merged/data/bges.txt, data\bges.txt
+UrlDownloadToFile, *0 https://raw.githubusercontent.com/APN-Pucky/tyrant_optimize/merged/data/bges.txt, data\bges.txt
 if ErrorLevel
 {
     MsgBox, Error downloading bges.txt.
@@ -290,12 +311,16 @@ IniWrite, %Effect%, %IniFileName%, %IniSection%, Effect
 IniWrite, %Mode%, %IniFileName%, %IniSection%, Mode
 IniWrite, %Order%, %IniFileName%, %IniSection%, Order
 IniWrite, %Operation%, %IniFileName%, %IniSection%, Operation
+IniWrite, %Dominion%, %IniFileName%, %IniSection%, Dominion
 IniWrite, %Iterations%, %IniFileName%, %IniSection%, Iterations
+IniWrite, %Mono%, %IniFileName%, %IniSection%, Mono
+IniWrite, %Commander%,  %IniFileName%, %IniSection%, Commander
 IniWrite, %Threads%, %IniFileName%, %IniSection%, Threads
 IniWrite, %SimOptions%, %IniFileName%, %IniSection%, SimOptions
 IniWrite, %Endgame%, %IniFileName%, %IniSection%, Endgame
 IniWrite, %Fund%, %IniFileName%, %IniSection%, Fund
 IniWrite, %x86%, %IniFileName%, %IniSection%, x86
+IniWrite, %debug%, %IniFileName%, %IniSection%, debug
 
 while true
 {
@@ -305,3 +330,23 @@ while true
       break
 }
 ExitApp
+
+DownloadCards(url,file) { 
+	UrlDownloadToFile, *0 %url%, %file%
+	if ErrorLevel
+	{
+		MsgBox, Error downloading %file%.
+		had_error := true
+	} 
+	else 
+	{
+		FileReadLine,VAR1,%file%,3
+		If InStr(VAR1, "File Not Found")
+		{
+			FileDelete, %file%
+			return 0
+		}
+	}
+	return 1
+}
+

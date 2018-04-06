@@ -1,32 +1,34 @@
 // Guild War BGEs
-Sandblast: Entrap All 7; Weaken All 4
+Halcyon's Command: Enhance All Armor 8; Heal All Imperial 10; Enrage Imperial 4
+Typhon's Blood: Enhance All Refresh 8; Enrage All Bloodthirsty 5; Heal 16
+Sandblast: Entrap All 10; Weaken All 7
 Plasma Burst: Heal 15; Protect 15; Sunder 15
-Landmine: Entrap 18
-Inspired: Rally all 4
-Blightblast: Enfeeble all 4
+Landmine: Entrap 25
+Inspired: Rally all 6
+Blightblast: Enfeeble all 5
 Bombing Run: Strike all 3
-Triage: Heal all 10
+Triage: Heal all 13
 Charged Up: Overload 3
-Combined Arms: Enhance All Coalition 2; Rally+Enfeeble+Strike all 2
+Combined Arms: Enhance All Coalition 3; Rally+Enfeeble+Strike all 3
 Blitzkrieg: Rush
 Paladin's Presence: Protect all 3
 Viral Warfare: Enhance all Poison 3
 Progenitor Tech: Heal+Protect+Rally+Enfeeble+Strike+Weaken all 3
 Diminisher: Sunder all 2
-Divine Blessing: Heal all 6; Rally all 3
+Divine Blessing: Heal all 9; Rally all 6
 Opalescence: Heal+Protect all 2
 Power Source: Overload 1
 Ferocity: Enrage 6
-Tartarian Gift: Rally all 6; Enrage all 5; Strike All 1
-Artillery: Mortar all 7
+Tartarian Gift: Rally all 8; Enrage all 6
+Artillery: Mortar all 10
 //Orbital Cannon: Strike 16
 Orbital Cannon: Enfeeble 14
 Bloodthirst: Enhance All Leech 6
-Emergency Aid: Heal 22
+Emergency Aid: Heal 30
 Extended Reach: Enhance All Swipe 5
-Mirror Madness: Mimic 11
+Mirror Madness: Mimic 14
 Eternal Backlash: Enhance All Counter 6; Entrap 6
-Winter Tempest: Protect+Weaken All 4
+Winter Tempest: Protect All 5; Weaken All 7
 Sulfuris Essence: Evolve All Poison Venom; Enhance All Venom 6
 Way of the Forsaken: Enhance All Corrosive 8; Heal All Raider 7; Enfeeble 7
 Critical Blast: Enhance All Swipe 4; Enfeeble All 4
@@ -49,10 +51,10 @@ Phobos Station: Orbital Bombardment
 Orbital Bombardment: Strike all 3; Siege all 5
 // --
 The Spire: Imperial Domain
-Imperial Domain: Heal all 5
+Imperial Domain: Heal all 7
 // --
 SkyCom Complex: Network Interference
-Network Interference: Weaken all 4
+Network Interference: Weaken all 6
 // --
 Mech Graveyard: Scrap Field
 Scrap Field: Evolve 2 Pierce Rupture
@@ -71,7 +73,7 @@ Colonial Relay: CriticalReach
 Borean Forges: Fortification
 // --
 Brood Nest: Blighted Swamps
-Blighted Swamps: Enfeeble all 3
+Blighted Swamps: Enfeeble all 4
 // --
 Cleave Rock: Splinter Legacy
 Splinter Legacy: Enhance all Berserk 4
@@ -81,10 +83,10 @@ Elder Port: Oath-of-Loyalty
 Infested Depot: Devour
 // --
 Jotun's Pantheon: Jotun's Presence
-Jotun's Presence: Protect all 3
+Jotun's Presence: Protect all 4
 // --
 Magma Foundry: Volcanic Rain
-Volcanic Rain: Strike all 3
+Volcanic Rain: Strike all 5
 // --
 Malort's Den: Lethal Spores
 Lethal Spores: Enhance all Venom 5
@@ -93,9 +95,9 @@ Norhaven: Storm Shelters
 Storm Shelters: Enhance all Evade 3
 // --
 Red Maw Base: Red Maw Barracks
-Red Maw Barracks: Rally all 3
+Red Maw Barracks: Rally all 5
 // --
-Tyrolian Outpost: Reforged Plating
+Tyrolian Outpost: Iron Will
 Reforged Plating: Enhance all Armor 6
 // --
 Ashrock Redoubt: Counterflux

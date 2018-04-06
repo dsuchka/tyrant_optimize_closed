@@ -15,14 +15,14 @@ const std::string skill_names[Skill::num_skills] =
     "Enfeeble", "Jam", "Mortar", "Siege", "Strike", "Sunder", "Weaken",
 
     // Activation (helpful):
-    "Enhance", "Evolve", "Heal", "Mend", "Overload", "Protect", "Rally",
+    "Enhance", "Evolve", "Heal", "Mend", "Overload", "Protect", "Rally", "Fortify",
     "Enrage", "Entrap", "Rush",
 
     // Activation (unclassified/polymorphic):
     "Mimic",
 
     // Defensive:
-    "Armor", "Avenge", "Corrosive", "Counter", "Evade", "Subdue",
+    "Armor", "Avenge", "Corrosive", "Counter", "Evade", "Subdue", "Absorb", "Flying",
     "Payback", "Revenge", "Tribute", "Refresh", "Wall", "Barrier",
 
     // Combat-Modifier:
@@ -32,12 +32,12 @@ const std::string skill_names[Skill::num_skills] =
     "Berserk", "Inhibit", "Sabotage", "Leech", "Poison",
 
     // Triggered:
-    "Allegiance", "Flurry", "Valor", "Stasis", "Summon",
+    "Allegiance", "Flurry", "Valor", "Stasis", "Summon", "Bravery",
 };
 
 const std::string skill_trigger_names[Skill::num_triggers] =
 {
-    "activate", "play", "death",
+    "activate", "play", "attacked","death",
 };
 
 const std::string passive_bge_names[PassiveBGE::num_passive_bges] =
@@ -49,7 +49,7 @@ const std::string passive_bge_names[PassiveBGE::num_passive_bges] =
     "Bloodlust", "Brigade", "Counterflux", "Divert", "EnduringRage", "Fortification", "Heroism",
     "ZealotsPreservation", "Metamorphosis", "Megamorphosis", "Revenge", "TurningTides", "Virulence",
     "HaltedOrders", "Devour", "CriticalReach", "TemporalBacklash", "Furiosity", "OathOfLoyalty",
-    "BloodVengeance", "ColdSleep",
+    "BloodVengeance", "ColdSleep", "IronWill", "Unity", 
 };
 
 const std::string cardtype_names[CardType::num_cardtypes]{"Commander", "Assault", "Structure", };
@@ -60,12 +60,12 @@ unsigned const upgrade_cost[]{0, 5, 15, 30, 75, 150};
 std::map<const Card*, unsigned> dominion_cost[3][7];
 std::map<const Card*, unsigned> dominion_refund[3][7];
 
-unsigned min_possible_score[]{0, 0, 0, 10, 5, 5, 5, 0
+unsigned min_possible_score[]{0, 0, 0, 20, 20, 5, 5, 5, 0
 #ifndef NQUEST
 , 0
 #endif
 };
-unsigned max_possible_score[]{100, 100, 100, 100, 65, 65, 100, 100
+unsigned max_possible_score[]{100, 100, 100, 208, 208, 85, 85, 100, 100
 #ifndef NQUEST
 , 100
 #endif

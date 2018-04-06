@@ -1,10 +1,18 @@
-MAIN := tuodebug
+MAIN := tuodebug.osx
 SRCS := $(wildcard *.cpp)
 OBJS := $(patsubst %.cpp,obj-debug/%.o,$(SRCS))
 INCS := $(wildcard *.h)
 
-CPPFLAGS := -Wall -Werror -std=c++11 -stdlib=libc++ -O3 -I/usr/local/include 
-LDFLAGS :=  -L/usr/local/lib -lboost_system-mt -lboost_thread-mt -lboost_filesystem-mt -lboost_regex-mt  -Bstatic
+ifndef VERSION
+VERSION = $(shell git describe --tags --abbrev=0 --dirty)
+ifeq ($(VERSION),)
+VERSION=NO VERSION
+${warning "VERSION is not set (USING NO VERSION instead), use make VERSION=vX.XX.X"}
+endif
+endif
+
+CPPFLAGS := -Wall -Werror -std=c++11 -stdlib=libc++ -Ofast -I/usr/local/include -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)--debug"'
+LDFLAGS :=  -L/usr/local/lib -lboost_system-mt -lboost_thread-mt -lboost_filesystem-mt -lboost_regex-mt
 
 all: $(MAIN)
 
@@ -14,6 +22,8 @@ obj-debug/%.o: %.cpp ${INCS}
 
 $(MAIN): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+
+rebuild: clean all
 
 clean:
 	rm -f $(MAIN) obj-debug/*.o
