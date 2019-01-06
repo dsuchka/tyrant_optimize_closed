@@ -1440,17 +1440,37 @@ struct PerformAttack
             }
 
             modify_attack_damage<def_cardtype>(pre_modifier_dmg);
-            if (!att_dmg) { on_attacked<def_cardtype>();return 0; }
+            if (!att_dmg)
+            {
+                on_attacked<def_cardtype>();
+            }
+            else
+            {
+                // evals attack damage dealt to def card
+                attack_damage<def_cardtype>();
+                if (__builtin_expect(fd->end, false)) { return att_dmg; }
 
-            attack_damage<def_cardtype>();
+                // dmg-dep skills states (poisoned, inhibited, etc)
+                damage_dependant_pre_oa<def_cardtype>();
 
-            if (__builtin_expect(fd->end, false)) { return att_dmg; }
-            damage_dependant_pre_oa<def_cardtype>();
+                // triggers
+                on_attacked<def_cardtype>();
+                if (!is_alive(att_status)) { return att_dmg; }
 
-            on_attacked<def_cardtype>();
-            if (!is_alive(att_status)) { return att_dmg; }
+                // evals dmg-dep skills/BGEs (counter, leech, devour)
+                if (__builtin_expect(post_attack_dmg_dependant_op<def_cardtype>(), false)) { return att_dmg; }
+            }
 
+            // evals dmg-indep skills/BGEs (subdue)
+            post_attack_dmg_independant_op<def_cardtype>();
 
+            return att_dmg;
+        }
+
+    // returns: true when attacker is dead (stop), false - is still alive (continue)
+    template<enum CardType::CardType def_cardtype>
+        bool post_attack_dmg_dependant_op()
+        {
             // Enemy Skill: Counter
             if (def_status->has_skill(Skill::counter))
             {
@@ -1486,7 +1506,7 @@ struct PerformAttack
                 }
 
                 // is attacker dead?
-                if (!is_alive(att_status)) { return att_dmg; }
+                if (!is_alive(att_status)) { return true; }
             }
 
             // Skill: Corrosive
@@ -1563,6 +1583,13 @@ struct PerformAttack
                 att_status->ext_hp(bge_value);
             }
 
+            // attacker is not dead
+            return false;
+        }
+
+    template<enum CardType::CardType def_cardtype>
+        void post_attack_dmg_independant_op()
+        {
             // Skill: Subdue
             unsigned subdue_value = def_status->skill(Skill::subdue);
             if (__builtin_expect(subdue_value, false))
@@ -1585,8 +1612,6 @@ struct PerformAttack
                     att_status->m_hp = att_status->max_hp();
                 }
             }
-
-            return att_dmg;
         }
 
     template<enum CardType::CardType>
