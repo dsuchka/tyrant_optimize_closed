@@ -1355,7 +1355,7 @@ void print_score_inline(const FinalResults<long double> score) {
 void print_sim_card_values(Deck* original_deck, Process& p, unsigned iter) // run_deck == p.your_decks[0]
 {
     if(!print_values)return;
-    if(p.your_decks.size() != 1)return; // only for single deck
+    if(p.your_decks.size() != 1)return; // only for single deck
     std::string last_name;
     long  double score;
     Deck* sim_deck = p.your_decks[0];
