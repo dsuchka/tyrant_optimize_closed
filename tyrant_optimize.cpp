@@ -76,6 +76,7 @@ namespace {
     unsigned use_fused_card_level{0};
     unsigned use_fused_commander_level{0};
     bool print_upgraded{false};
+    bool print_values{false};
     bool simplify_output{false};
     bool show_ci{false};
     bool use_harmonic_mean{false};
@@ -135,6 +136,7 @@ void init()
     use_fused_card_level=0;
     use_fused_commander_level=0;
     print_upgraded=false;
+    print_values=false;
     simplify_output=false;
     show_ci=false;
     use_harmonic_mean=false;
@@ -1233,7 +1235,9 @@ void print_results(const EvaluatedResults& results, std::vector<long double>& fa
             break;
     }
 }
+
 //------------------------------------------------------------------------------
+// Prints which cards have been upgraded
 void print_upgraded_cards(Deck* deck)
 {
     if(!print_upgraded)return;
@@ -1345,6 +1349,47 @@ void print_score_inline(const FinalResults<long double> score) {
         auto opp_win_points = score.losses ? max_score - ((score.points - (max_score - min_score) * (1.0 - score.losses)) / score.losses) : score.points;
         std::cout << " [" << opp_win_points << " per opp win]";
     }
+}
+//------------------------------------------------------------------------------
+// Calculates and prints individual card value in this deck
+void print_sim_card_values(Deck* original_deck, Process& p, unsigned iter) // run_deck == p.your_decks[0]
+{
+    if(!print_values)return;
+    if(p.your_decks.size() != 1)return; // only for single deck
+    std::string last_name;
+    long  double score;
+    Deck* sim_deck = p.your_decks[0];
+    Deck* your_deck = original_deck->clone(); //save the original deck
+    auto cards = your_deck->cards;
+    //sim original/base result
+    sim_deck->commander = your_deck->commander;
+    sim_deck->cards = your_deck->cards;
+    sim_deck->alpha_dominion = your_deck->alpha_dominion;
+    EvaluatedResults results = { EvaluatedResults::first_type(p.enemy_decks.size()*p.your_decks.size()), 0 };
+    results = p.evaluate(iter, results);
+    const FinalResults<long  double> fr_base= compute_score(results,p.factors);
+    long double base = fr_base.points;
+    std::cout << "Value of Cards: ";
+    for (unsigned i =0; i < cards.size();++i)
+    {
+        auto card = cards[i];
+        if (card->m_name == last_name)
+        {
+        }
+        else
+        {
+            last_name = card->m_name;
+            //sim it
+            sim_deck->cards = your_deck->cards; //reset cards
+            sim_deck->cards.erase(sim_deck->cards.begin() + i); //remove to test card
+            EvaluatedResults results = { EvaluatedResults::first_type(p.enemy_decks.size()*p.your_decks.size()), 0 };
+            results = p.evaluate(iter, results);
+            const FinalResults<long  double> fr= compute_score(results,p.factors);
+            score = base - fr.points; //subtract from result to get value
+            std::cout << card->m_name << " (" << score << "), ";
+        }
+    }
+    std::cout << std::endl;
 }
 //------------------------------------------------------------------------------
 void print_deck_inline(const unsigned deck_cost, const FinalResults<long double> score, Deck * deck)
@@ -1805,6 +1850,7 @@ void hill_climbing(unsigned num_min_iterations, unsigned num_iterations, Deck* d
     std::cout << "Optimized Deck: ";
     print_deck_inline(get_deck_cost(d1), best_score, d1);
     print_upgraded_cards(d1);
+    print_sim_card_values(d1,proc,num_iterations);
 }
 
 inline FinalResults<long double> fitness(Deck* d1,
@@ -2000,6 +2046,7 @@ void simulated_annealing(unsigned num_min_iterations, unsigned num_iterations, D
     std::cout << "Optimized Deck: ";
     print_deck_inline(get_deck_cost(best_deck), best_score, best_deck);
     print_upgraded_cards(best_deck);
+    print_sim_card_values(best_deck,proc,num_iterations);
 }
 unsigned factorial(unsigned n)
 {
@@ -2691,6 +2738,10 @@ FinalResults<long double> run(int argc, char** argv)
         {
             print_upgraded = true;
         }
+        else if (strcmp(argv[argIndex], "+vc") == 0)
+        {
+            print_values = true;
+        }
         else if (strcmp(argv[argIndex], "+ci") == 0)
         {
             show_ci = true;
@@ -2898,7 +2949,7 @@ FinalResults<long double> run(int argc, char** argv)
         }
         else if (strcmp(argv[argIndex], "debug") == 0)
         {
-	    if(check_input_amount(argc,argv,argIndex,1))exit(1);
+	          if(check_input_amount(argc,argv,argIndex,1))exit(1);
             opt_todo.push_back(std::make_tuple(0u, 0u, debug));
             opt_num_threads = 1;
         }
@@ -2906,7 +2957,7 @@ FinalResults<long double> run(int argc, char** argv)
         {
             // output the debug info for the first battle that min_score <= score <= max_score.
             // E.g., 0 0: lose; 100 100: win (non-raid); 20 100: at least 20 damage (raid).
-	    if(check_input_amount(argc,argv,argIndex,2))exit(1);
+	          if(check_input_amount(argc,argv,argIndex,2))exit(1);
             opt_todo.push_back(std::make_tuple((unsigned)atoi(argv[argIndex + 1]), (unsigned)atoi(argv[argIndex + 2]), debuguntil));
             opt_num_threads = 1;
             argIndex += 2;
@@ -3508,6 +3559,7 @@ FinalResults<long double> run(int argc, char** argv)
                                results = p.evaluate(std::get<0>(op), results);
                                print_results(results, p.factors);
                                fr = compute_score(results,p.factors);
+                               print_sim_card_values(your_deck,p,std::get<0>(op));
                                break;
                            }
             case climb_forts: {
