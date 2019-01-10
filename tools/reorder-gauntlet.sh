@@ -7,20 +7,22 @@
 INPUT_FILE="$1"
 OUTPUT_FILE="${2:-$(dirname "$1")/reordered${SUFFIX:+.${SUFFIX}}.$(basename "$1")}"
 
-declare -i ITERS=25
+declare -i ITERS=70
 
 #ENEMY="GW_GT_ALL"
 #ENEMY="CQ_GT_ALL"
-ENEMY="BRAWL_GT_ALL"
+#ENEMY="BRAWL_GT_ALL"
+ENEMY="PREBRAWL_GT_ALL"
 #ENEMY="arena_all"
 
 TUO_OPTIONS=(
     brawl
-    _brawl_gt
+    #_brawl_gt
+    _prebrawl_gt
 
     -t 2
 
-    #-e "Counterflux"
+    -e "Virulence"
 
     ## CQ settings
     #surge win
@@ -72,8 +74,8 @@ while read -r line; do
         tuo.sh "$deck" "$ENEMY" "${TUO_OPTIONS[@]}" reorder $ITERS &> "$TMP_FILE" &
         declare -i tuo_pid=$!
         wait $tuo_pid
-        last_line=$(tail -n1 "$TMP_FILE")
-        if [[ $last_line =~ ^Optimized\ Deck:.*\ ([0-9.]+)(\ \[([0-9.]+)\ per\ win\])?:\ ([^:]+)$ ]]; then
+        result_line=$(tail -n3 "$TMP_FILE" | fgrep 'Optimized Deck:' )
+        if [[ $result_line =~ ^Optimized\ Deck:.*\ ([0-9.]+)(\ \[([0-9.]+)\ per\ win\])?:\ ([^:]+)$ ]]; then
             opt_score="${BASH_REMATCH[1]}"
             opt_win_score="${BASH_REMATCH[3]}"
             opt_deck="${BASH_REMATCH[4]}"

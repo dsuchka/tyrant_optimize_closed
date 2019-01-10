@@ -10,7 +10,7 @@ OUTPUT_FILE="${2:-$(dirname "$1")/appraised${SUFFIX:+.${SUFFIX}}.$(basename "$1"
 
 function reverse_forts() { [[ $1 =~ ^(..)_x_(.._..)$ ]] && echo "${BASH_REMATCH[2]}_x_${BASH_REMATCH[1]}"; }
 
-declare -i ITERS=500
+declare -i ITERS=1100
 
 #ENEMY="GW_GT_ATK_ALL"
 ENEMY="BRAWL_GT_ATK_ALL"
@@ -27,9 +27,9 @@ TUO_OPTIONS=(
     #ordered
 
     enemy:ordered
-    #-e "Counterflux"
+    -e "Virulence"
 
-    -t 2
+    -t 4
 
     ## CQ settings
     #fight defense
