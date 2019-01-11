@@ -2,6 +2,12 @@
 Tributed On-Attacked-Rally during enemy turn on a cooldown card -> (Impact by now == 0, but it is wrong)
 Flying units don't get mark stacks in tuo, but should get them -> no impact
 
+brawl-defense:
+Optimized Deck: 10 units: (79.9912% win) 1.9005e+06 [-9.49787e+06 per opp win]: Gaia the Purifier, Broodmother's Nexus, Gurzwog Ur-Horror #2, Miasma Master, Tonguelasher Olm, Prixis Worldbender, Immortal Vow, Putrid Gyremaw, Industry of Eden #3
+=> higher max_brawl_score to ~ 100
+or
+=> improve brawl formula for guild brawl (exclude fortresses?)
+
 //Testing
 Add more single unit test cases
 Add more whole deck unit test cases
