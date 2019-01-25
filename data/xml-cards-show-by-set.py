@@ -185,3 +185,7 @@ displayForSet(4750)
 print()
 print("//  ***  Invisible Rewards  ***")
 displayForSet(5000)
+
+print()
+print("//  ***  Promotion (Exclusive)  ***")
+displayForSet(9000)
