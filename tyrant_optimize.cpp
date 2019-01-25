@@ -3588,7 +3588,8 @@ FinalResults<long double> run(int argc, char** argv)
             case reorder: {
 
                               //TODO check for your_decks.size()==1
-                              your_deck->strategy = DeckStrategy::ordered;
+                              if (your_deck->strategy != DeckStrategy::exact_ordered)
+                                  your_deck->strategy = DeckStrategy::ordered;
                               use_owned_cards = true;
                               use_top_level_card = false;
                               use_top_level_commander = false;
