@@ -843,6 +843,36 @@
       </always_include>
     </deck>
   </raid>
+  <raid>
+        <id>65</id>
+        <name>Captain Daedalus Raid</name>
+        <fortress_pool amount="2">
+                <card>18840</card>
+                <card>18850</card>
+                <card>18860</card>
+                <card>18870</card>
+        </fortress_pool>
+        <levels>26</levels>
+        <commander>26142</commander>
+        <deck>
+            <always_include>
+                <card>63050</card>
+                <card>63060</card>
+                <card>63070</card>
+                <card>63080</card>
+                <card>63090</card>
+                <card>63100</card>
+            <card_pool amount="4">
+                <card>63050</card>
+                <card>63060</card>
+                <card>63070</card>
+                <card>63080</card>
+                <card>63090</card>
+                <card>63100</card>
+            </card_pool>
+            </always_include>
+        </deck>
+    </raid> 
   <!-- END of Raids -->
   <!-- Campaigns -->
   <campaign>

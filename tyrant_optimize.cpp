@@ -1907,7 +1907,7 @@ void simulated_annealing(unsigned num_min_iterations, unsigned num_iterations, D
     FinalResults<long double> best_score = compute_score(results, proc.factors);
     //const Card* best_commander = d1->commander;
     //const Card* best_alpha_dominion = cur_deck->alpha_dominion;
-    std::vector<const Card*> best_cards = cur_deck->cards;
+    //std::vector<const Card*> best_cards = cur_deck->cards;
     unsigned deck_cost = get_deck_cost(cur_deck);
     fund = std::max(fund, deck_cost);
     print_deck_inline(deck_cost, best_score, cur_deck);
@@ -1982,7 +1982,7 @@ void simulated_annealing(unsigned num_min_iterations, unsigned num_iterations, D
             if(candidate ?
                     (from_slot < cur_deck->cards.size() && (from_slot == to_slot && candidate == cur_deck->cards[to_slot]))
                     :
-                    (from_slot == best_cards.size()))
+                    (from_slot == cur_deck->cards.size()))
             {
                 continue;
             }
