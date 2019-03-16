@@ -24,7 +24,7 @@ class Deck:
         self.cards_commander = self.cards[0]
         self.cards_dominion = None
         self.cards_other = self.cards[1:]
-        if (self.cards[1].name.startswith("Alpha ")):
+        if (self.cards[1].name.startswith("Alpha ") or self.cards[1].name.endswith(" Nexus")):
             self.cards_dominion = self.cards[1]
             self.cards_other = self.cards_other[1:]
         self.cards_other.sort(key = lambda x: x.name)
