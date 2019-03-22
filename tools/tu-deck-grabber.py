@@ -426,7 +426,8 @@ def doGrabLastDeck(http):
 
     # append cards
     card_ids_ordered = list(enemy_card_id_to_count.keys())
-    card_ids_ordered.sort(reverse=False)
+    sort_key = (lambda cid: getCardNameById(cid)) if config.getboolean('CORE', 'sort_cards_by_name') else (lambda cid: cid)
+    card_ids_ordered.sort(reverse=False, key=sort_key)
     for card_id in card_ids_ordered:
         count = enemy_card_id_to_count[card_id]
         out += ", " + getCardNameById(card_id)
