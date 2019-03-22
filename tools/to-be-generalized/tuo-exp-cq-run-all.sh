@@ -1,29 +1,32 @@
 #!/bin/bash
 
+declare -i PRECQ=1
+
 yforts=""
 eforts=""
 mode=${1:-both}
 
-#yforts="Andar Quarantine-3, The Spire-3, Ashrock Redoubt-3, Baron's Claw Labs-2, SkyCom Complex-2"
-#yforts="Phobos Station-3, Ashrock Redoubt-3, Baron's Claw Labs-3, Andar Quarantine-3, Norhaven-2"
-yforts="Phobos Station-3, Andar Quarantine-3, SkyCom Complex-3, Spire-3, Ashrock Redoubt-3"
-eforts="Phobos Station-3, The Spire-3, Ashrock Redoubt-3, Baron's Claw Labs-2, SkyCom Complex-2, Andar Quarantine-2"
+#yforts="Phobos Station-2, Andar Quarantine-2, Borean Forges-2, The Spire-2, Jotun's Pantheon-2, SkyCom Complex-2"
+#eforts=$yforts
 
 attack_effects=(
-    -e ""
+    #-e "Asphodel Nexus"
     #-e "Phobos Station"
+    -e "Andar Quarantine"
 
-    #-e "Andar Quarantine"
     #-e "The Spire"
     #-e "Ashrock Redoubt"
     #-e "Baron's Claw Labs"
     #-e "SkyCom Complex"
+    #-e "Jotun's Pantheon"
 
     #-e "Colonial Relay"
     #-e "Mech Graveyard"
     #-e "Infested Depot"
     #-e "Seismic Beacon"
     #-e "Tyrolian Outpost"
+    #-e "Elder Port"
+    #-e "Malort's Den"
 
     #-e "Red Maw Base"
     #-e "Brood Nest"
@@ -32,18 +35,29 @@ attack_effects=(
 )
 
 defense_effects=(
-    -e ""
+    -e "Asphodel Nexus"
 )
 
+(( PRECQ )) && PRE_FLAG="PRE" || PRE_FLAG=""
+
 flags=(
+    -f ddd_b64
     -f _${TUO_LOGIN:-dsuchka}
-    -f _cq_gt_atk
-    -f _cq_gt2
-    -f _bb_lv1
-    -f "climb-opts:iter-mul=6,use-all-card-levels"
-    #-f dom-
+    -f _${TUO_LOGIN:-dsuchka}_bb
+    #-f _box_alliance
+    -f _discand_legacy_pve_rewards
+    -f _discand_legacy_pvp_rewards
+    -f _discand_mutant_rewards
+    -f _discand_outdated_p2w
+    -f _${PRE_FLAG,,}cq_gt_atk
+    -f _${PRE_FLAG,,}cq_gt
+    -f "climb-opts:iter-mul=6"
+    #-f dom-maxed
+    -f dom-owned
     -G 2 #1
-    -F 550 #6000 #1000 #6000
+    -F 5500
+    -f +uc
+    -f +vc
 )
 
 attack=(
@@ -64,26 +78,36 @@ declare -A attack_enemies defense_enemies
 
 # enemy def-decks for 'attack' simming
 attack_enemies=(
-    #[cq_top]="CQ_GT_MYTH:0.5;CQ_GT_HERO:1.25;CQ_GT_NORM:0.75"
-    #[cq_low]="CQ_GT_HERO:0.5;CQ_GT_NORM:1.25;CQ_GT_EASY:0.75"
-    [cq_top]="CQ_GT_HARD:0.5;CQ_GT_NORM:0.75"
-    [cq_low]="CQ_GT_NORM:0.5;CQ_GT_EASY:0.75"
+    #[cq_top]="${PRE_FLAG}CQ_GT_MYTH:0.75;${PRE_FLAG}CQ_GT_HERO:1.75;${PRE_FLAG}CQ_GT_NORM:1.5"
+    #[cq_myth]="${PRE_FLAG}CQ_GT_MYTH"
+    #[cq_hero]="${PRE_FLAG}CQ_GT_HERO"
+    [cq_med]="${PRE_FLAG}CQ_GT_HERO;${PRE_FLAG}CQ_GT_NORM"
+    #[cq_low]="${PRE_FLAG}CQ_GT_NORM;${PRE_FLAG}CQ_GT_EASY"
+    #[cq_top]="${PRE_FLAG}CQ_GT_HARD:0.5;${PRE_FLAG}CQ_GT_NORM:0.75"
+    #[cq_low]="${PRE_FLAG}CQ_GT_NORM:0.5;${PRE_FLAG}CQ_GT_EASY:0.75"
+    #[brawl_top]="BRAWL_GT__WR_60_64:0.3;BRAWL_GT__WR_65_69:0.4;BRAWL_GT__WR_70_74:0.5;BRAWL_GT__WR_75_79:0.6;BRAWL_GT__WR_80_84:0.6;BRAWL_GT__WR_85_89:0.5"
+    #[arena_full]="arena_full"
+    #[sd_top]="/^StoredDecks\\.\\d+\\.(PrimalBairs|DireTide|TidalWave|MasterJedis|TrypticonDYN)\\./"
 )
 
 # enemy atk-decks for 'defense' simming
 defense_enemies=(
-    [cq_atk]="CQ_GT_ATK_HARD:0.5;CQ_GT_ATK_NORM:1.0"
+    [cq_atk]="${PRE_FLAG}CQ_GT_ATK_MYTH:0.75;${PRE_FLAG}CQ_GT_ATK_HERO:1.75;${PRE_FLAG}CQ_GT_ATK_NORM:1.5"
+    #[brawl_atk]="BRAWL_GT_ATK_MYTH:1.0;BRAWL_GT_ATK_HERO:1.25;BRAWL_GT_ATK_NORM:0.75"
 )
 
 case "$TUO_LOGIN" in
     (dsuchka|"")
         attack_commanders=(
             any
-            any_rt
-            typhon
-            #const
-            #krellus
-            #any_imp
+            any_{im,rd,bt,xn,rt}
+        )
+        ;;
+
+    (engeji)
+        attack_commanders=(
+            any
+            any_r1
         )
         ;;
 
@@ -133,7 +157,7 @@ if [[ $mode = attack ]] || [[ $mode = both ]]; then
         for commander in "${attack_commanders[@]}"; do
             tuo-exp-cq.sh ${TUO_DECK:+-s -D "$TUO_DECK"} -c $commander \
                 -Y "$yforts" -E "$eforts" \
-                "${attack_effects[@]}" "${attack[@]}" "${flags[@]}" "${attack_enemies[$enemy]}" "$enemy"
+                "${attack_effects[@]}" "${attack[@]}" "${flags[@]}" "${attack_enemies[$enemy]}" "${PRE_FLAG}${enemy}"
         done
     done
 fi
@@ -142,7 +166,7 @@ if [[ $mode = defense ]] || [[ $mode = both ]]; then
         for commander in "${defense_commanders[@]}"; do
             tuo-exp-cq.sh ${TUO_DECK:+-s -D "$TUO_DECK"} -c $commander \
                 -Y "$yforts" -E "$eforts" \
-                "${defense_effects[@]}" "${defense[@]}" "${flags[@]}" "${defense_enemies[$enemy]}" "$enemy"
+                "${defense_effects[@]}" "${defense[@]}" "${flags[@]}" "${defense_enemies[$enemy]}" "${PRE_FLAG}${enemy}"
         done
     done
 fi

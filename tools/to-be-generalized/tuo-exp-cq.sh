@@ -192,7 +192,7 @@ for effect in "${effects[@]}"; do
         ${endgame:+endgame "$endgame"}
     )
 
-    [[ $commander != any ]] && tuo_options+=("keep-commander")
+    [[ $commander =~ ^any(_|$) ]] || opts+=("keep-commander")
 
     tuo_options+=(
         "${flags[@]}" "${game_mode_opts[@]}"
