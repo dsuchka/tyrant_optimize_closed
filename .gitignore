@@ -16,6 +16,7 @@ test/**
 data/customdecks.txt
 data/ownedcards.txt
 out.txt
+out.*
 *.cmd
 *.dat
 *.out
@@ -26,6 +27,7 @@ tuo.exe
 *.gcov
 .coveralls.yml
 build-*
+tuo-omp
 tuo-debug.exe
 tuodebug.exe
 tuo-x86-debug.exe

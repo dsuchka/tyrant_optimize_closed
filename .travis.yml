@@ -3,16 +3,25 @@ matrix:
   include:
   - env:
     - TUO_PLATFORM='windowsXX'
-    - TUO_FILE_32='tuo-x86.exe'
-    - TUO_FILE_64='tuo.exe'
-    - TUO_FILE_32_DEBUG='tuo-x86-debug.exe'
-    - TUO_FILE_64_DEBUG='tuo-debug.exe'
     os: linux
     dist: trusty
     sudo: required
-    compiler: gcc
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - gcc-7
+          - g++-7
 
 before_install:
+  # src: https://stackoverflow.com/a/49412522
+  # Export CC and CXX to tell cmake which compiler to use
+  - export CC=gcc-7
+  - export CXX=g++-7
+  # Check versions of gcc, g++ and cmake
+  - gcc -v && g++ -v && cmake --version
+  # Run your build commands next
   - TUO_TARGET="${TUO_PLATFORM::${#TUO_PLATFORM}-2}"
   - "./build/${TUO_TARGET}/requirements.sh"
 
@@ -31,13 +40,9 @@ deploy:
   name: "${TRAVIS_COMMIT_MESSAGE}"
   api_key:
     secure: vKTCOsNwCpSzB2buiNSroCvhAR5xHv86L7YDa09A3Y4oZ/grFmcARQKFkjG/zJif+4gpHmrscUJIC4Ru9900QQSVP/mUh5NizPFpoQHHQBbRPOFoor0W0lSXhsFMA154sHICDQ7ZZhZbF8s804VL+JsmAblFqJ0XWNtLD9f0ElklEIELYdhVGDipXhWnIqA3TfG6ztm9KjMXZ3pfPRMf/l4D0t7ISHfzfX07O257ppH83DAEs1aJElG3kxDJiEWoi6k9fq7SIYXbFhmwj6aM3K//qj9ZxIhFwRLaEb8l2zOXj3hNtDGGg99P5Dz7UeDy7l/+eWOgIMBJLe1Ck9AbIYivnOychYxVn/wp56SbbaT1ZsNbgLQxygqc0/btfi2lrT9c0T6db+A9LSGOWvGk3n1pOPOMNE3wvOk7dhLfbA2azFDMoPswW7Hvad0ZQYkBg1TJK7gmChb5FYQtypZzA0CzJaw+r1z7d4a7mF7cAkZmGuM+/BbdmsX9AxYcazJAvsxgHmLnFSunKsw0B3kQ6l9DJmli7w4qi4kdjHGpxQCQ6ocqHmDMvFa85ejhvPjJDvYdyxltC1d5Jq+jxFL91d+2ZMGYdgptR05I0Dc9ApUcItv7NNbY8fNPWJT7AXAlY999bRt9Rz//JvSHUHstn5cc1s0ee6NGRTmiD5oAkuc=
+  file_glob: true
   file:
-    - SimpleTUOptimizeStarter.exe
-    - SimpleTUOptimizeStarter-x86.exe
-    - "${TUO_FILE_32}"
-    - "${TUO_FILE_32_DEBUG}"
-    - "${TUO_FILE_64}"
-    - "${TUO_FILE_64_DEBUG}"
+    - ./*.exe
     - "${TUO_FILE_ZIP}"
   skip_cleanup: true
   on:

@@ -6,29 +6,54 @@ set -xue
 make all
 MXE_DIR=/usr/lib/mxe
 
-#Windows x86 Build
-MXE_TARGET=i686-w64-mingw32.static
 
-${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -Bbuild-dir32-debug -DVERSION:STRING="${TRAVIS_TAG}--debug"
-sed -i -e 's/-DNDEBUG//g' build-dir32-debug/CMakeCache.txt #cmake sets dndebug by default
-cmake --build build-dir32-debug
-mv build-dir32-debug/tuo.exe $TUO_FILE_32_DEBUG
+declare -a a_openmp=("" "-openmp" )
+declare -a a_debug=("" "-debug" "-time")
+declare -a a_bit=("" "-x86" )
 
-${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -Bbuild-dir32 -DVERSION:STRING="${TRAVIS_TAG}" -DDEBUG:STRING="-DNTIMER"
-cmake --build build-dir32
-mv build-dir32/tuo.exe $TUO_FILE_32
+for omp in "${a_openmp[@]}"
+do
+for dbg in "${a_debug[@]}"
+do
+for bit in "${a_bit[@]}"
+do
 
+DFLAGS=""
+BDIR="build-dir${bit}${omp}${dbg}"
+NAME="tuo${bit}${omp}${dbg}.exe"
 
+if [ "$bit" = "" ]; then
 #Windows x64 Build
 MXE_TARGET=x86_64-w64-mingw32.static
+fi
+if [ "$bit" = "-x86" ]; then
+#Windows x86 Build
+MXE_TARGET=i686-w64-mingw32.static
+fi
 
-${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -Bbuild-dir64-debug -DVERSION:STRING="${TRAVIS_TAG}--debug"
-sed -i -e 's/-DNDEBUG//g' build-dir64-debug/CMakeCache.txt #cmake sets dndebug by default
-cmake --build build-dir64-debug
-mv build-dir64-debug/tuo.exe $TUO_FILE_64_DEBUG
+#No windows timer on default
+if [ "$dbg" = "" ]; then
+DFLAGS="${DFLAGS} -DDEBUG:STRING=\"-DNTIMER\""
+fi
+#activate openmp
+if [ "$omp" = "-openmp" ]; then
+DFLAGS="${DFLAGS} -DUSE_OPENMP=ON"
+fi
+#prep cmake
+${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -B${BDIR} -DVERSION:STRING="${TRAVIS_TAG}${bit}${omp}${dbg}"  ${DFLAGS}
 
-${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -Bbuild-dir64 -DVERSION:STRING="${TRAVIS_TAG}" -DDEBUG:STRING="-DNTIMER"
-cmake --build build-dir64
-mv build-dir64/tuo.exe $TUO_FILE_64
+#cmake sets dndebug by default => remove that
+if [ "$dbg" = "-debug" ]; then
+sed -i -e 's/-DNDEBUG//g' ${BDIR}/CMakeCache.txt
+fi
+
+# compile
+cmake --build ${BDIR}
+
+mv ${BDIR}/tuo.exe ${NAME}
+
+done
+done
+done
 
 set +xue

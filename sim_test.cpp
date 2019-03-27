@@ -4,6 +4,7 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE sim
 
+#include <chrono>
 #include <boost/test/included/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
@@ -19,20 +20,21 @@
 
 using namespace std;
 namespace bdata = boost::unit_test::data;
-typedef std::pair<FinalResults<long double>,std::string> Result;
+typedef std::tuple<FinalResults<long double>,std::string,double> Result; // score, output, time
 
 //pipe output: https://stackoverflow.com/questions/5405016/can-i-check-my-programs-output-with-boost-test
-struct cout_redirect {
-    cout_redirect( std::streambuf * new_buffer )
-        : old( std::cout.rdbuf( new_buffer ) )
+struct ios_redirect {
+    ios_redirect( std::streambuf * new_buffer ,std::ostream& ios)
+        : old( ios.rdbuf( new_buffer )), iios(ios)
     { }
 
-    ~cout_redirect( ) {
-        std::cout.rdbuf( old );
+    ~ios_redirect( ) {
+        iios.rdbuf( old );
     }
 
 private:
     std::streambuf * old;
+    std::ostream& iios;
 };
 
 struct TestInfo{
@@ -43,35 +45,54 @@ std::ostream& operator<<(std::ostream& os, const TestInfo& ti)
     return os << "Your Deck: " <<  ti.your_deck << "; Enemy Deck: " << ti.enemy_deck << "; BGE: " << ti.bge;
   }
 
-inline Result run_sim(int argc,const char** argv)
+inline Result run_sim(int argc,const char** argv, bool pipe_output=true)
 {
     Result res;
     FinalResults<long double> fr;
     debug_str.clear();
+    //
+
+    auto start_time = std::chrono::system_clock::now();
     //pipe output
     std::stringstream output;
+    std::stringstream eoutput;
     {
-        cout_redirect guard( output.rdbuf( ) );
-        //////////////////////
-        // only single thread for string stream build
-        //////////////////////
-        char** param = new char*[argc+2];
-        for(int i = 0; i < argc;i++)
-          param[i] = const_cast<char*>(argv[i]);
-        param[argc] = const_cast<char*>("-t");
-        param[argc+1] = const_cast<char*>("1");
+    ios_redirect guard2(eoutput.rdbuf(),std::cerr); //block warnings
+    if(pipe_output){
+        ios_redirect guard1(output.rdbuf() ,std::cout);
+
+          //////////////////////
+          // only single thread for string stream build
+          //////////////////////
+          char** param = new char*[argc+2];
+          for(int i = 0; i < argc;i++)
+            param[i] = const_cast<char*>(argv[i]);
+          param[argc] = const_cast<char*>("-t");
+          param[argc+1] = const_cast<char*>("1");
         fr = run(argc+2,param);
     }
-    res= std::make_pair(fr,"\n" + debug_str + output.str());
+    else{
+        //no guard here
+
+        char** param = new char*[argc];
+        for(int i = 0; i < argc;i++)
+            param[i] = const_cast<char*>(argv[i]);
+        fr = run(argc,param);
+    }
+  }
+
+    auto end_time = std::chrono::system_clock::now();
+    std::chrono::duration<double> delta_t = (end_time - start_time);
+    res= std::make_tuple(fr,"\n" + debug_str + output.str(),delta_t.count());
     return res;
 }
 
 inline void check_win(Result result) {
     BOOST_CHECK_MESSAGE(
-      1==result.first.wins &&
-      0==result.first.losses &&
-      0==result.first.draws
-      ,result.second);
+      1==std::get<0>(result).wins &&
+      0==std::get<0>(result).losses &&
+      0==std::get<0>(result).draws
+      ,std::get<1>(result));
     //BOOST_CHECK(100==result.points);
 }
 //inline void check_win_sim(const char* your_deck, const char* enemy_deck, const char* bge="") {
@@ -79,10 +100,20 @@ inline void check_win_sim(TestInfo ti) {
     /////////////
     // Max. Iter == 100, else check_win fails with integer vs double equal in check_win
     ////////////
-    const char* argv[] = {"tuo",ti.your_deck.c_str(),ti.enemy_deck.c_str(),"-e",ti.bge.c_str(),"sim", "100"}; //TODO hardcoded iterations? //much output on error?!
+    const char* argv[] = {"tuo",ti.your_deck.c_str(),ti.enemy_deck.c_str(),"-e",ti.bge.c_str(),"sim", "10"}; //TODO hardcoded iterations? //much output on error?! // better 100 iterations for test, 10 for checking errors
     Result result(run_sim(sizeof(argv)/sizeof(*argv),argv));
     //result.second += "\nTest: " + ti.your_deck + "; " + ti.enemy_deck + "; " + ti.bge;
     check_win(result);
+}
+
+inline void genetic(std::string gnt1,std::string gnt2){
+
+    const char* argv[] = {"tuo",gnt1.c_str(),gnt2.c_str(),"_test","brawl","genetic","10", "-t", "4"};
+    Result result(run_sim(sizeof(argv)/sizeof(*argv),argv,false));
+    std::ofstream mf;
+    mf.open("out.csv", std::ios_base::app);
+    mf << gnt1 << ";" << gnt2 << ";" << std::get<0>(result).points << ";" << std::get<2>(result) << std::endl;
+    mf.close();
 }
 
 
@@ -111,7 +142,24 @@ std::vector<TestInfo> read_test_file(const std::string filename) {
     }
     return ret;
 }
+/*
+BOOST_AUTO_TEST_SUITE(test_climb) // bench_climb
+BOOST_AUTO_TEST_CASE(test_climb_init)
+{
+    std::ofstream mf("out.csv");
+}
+BOOST_AUTO_TEST_CASE(test_genetic)
+{
+    for(unsigned i =0; i < 10; i++){
+      init();
+      genetic("shiznip","shiznip");
+    }
+    init();
+}
+BOOST_AUTO_TEST_SUITE_END()
+*/
 
+BOOST_AUTO_TEST_SUITE(test_sim)
 BOOST_AUTO_TEST_CASE(test_sim_init)
 {
     init();
@@ -120,6 +168,7 @@ BOOST_AUTO_TEST_CASE(test_sim_init)
     debug_line =true;
     BOOST_CHECK(1==1);//..
 }
+
 /////////////////////////////////////
 // Test Cases !should! be very close fights for maximum sensitivity of errors
 /////////////////////////////////////
@@ -150,6 +199,8 @@ BOOST_DATA_TEST_CASE(test_whole_decks,bdata::make(read_test_file("tests/test_who
    check_win_sim(ti);
 }
 BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
+
 /*
 BOOST_AUTO_TEST_SUITE(test_single_units)
 //single units to avoid randomness

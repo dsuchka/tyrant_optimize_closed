@@ -40,7 +40,7 @@ struct Results
     }
 };
 
-typedef std::pair<std::vector<Results<int64_t>>, unsigned> EvaluatedResults;
+typedef std::pair<std::vector<Results<uint64_t>>, unsigned> EvaluatedResults;
 
 template<typename result_type>
 struct FinalResults
