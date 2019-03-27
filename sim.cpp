@@ -1043,7 +1043,7 @@ inline bool skill_check<Skill::drain>(Field* fd, CardStatus* c, CardStatus* ref)
     template<>
 inline bool skill_check<Skill::mark>(Field* fd, CardStatus* c, CardStatus* ref)
 {
-    return (ref->m_card->m_type == CardType::assault);
+    return (ref->m_card->m_type == CardType::assault) && is_alive(c) && is_alive(ref);
 }
 
     template<>
@@ -1612,6 +1612,16 @@ struct PerformAttack
                     att_status->m_hp = att_status->max_hp();
                 }
             }
+
+            // Increase Mark-counter
+            unsigned mark_base = att_status->skill(Skill::mark);
+            if (__builtin_expect(mark_base, false)
+                    && skill_check<Skill::mark>(fd, att_status, def_status)) {
+                _DEBUG_MSG(1, "%s marks %s for %u\n",
+                        status_description(att_status).c_str(),
+                        status_description(def_status).c_str(), mark_base);
+                def_status->m_marked += mark_base;
+            }
         }
 
     template<enum CardType::CardType>
@@ -1787,15 +1797,6 @@ struct PerformAttack
                         status_description(att_status).c_str(), (coalition_value + 1)/2);
                 att_status->add_hp((coalition_value + 1)/2);
             }
-
-            // Increase Mark-counter
-            unsigned mark_base = att_status->skill(Skill::mark);
-            if(mark_base && skill_check<Skill::mark>(fd,att_status,def_status)) {
-                _DEBUG_MSG(1, "%s marks %s for %u\n",
-                        status_description(att_status).c_str(), status_description(def_status).c_str(), mark_base);
-                def_status->m_marked += mark_base;
-            }
-
         }
 
     template<enum CardType::CardType>
