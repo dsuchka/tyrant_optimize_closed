@@ -97,8 +97,7 @@ Storm Shelters: Enhance all Evade 3
 Red Maw Base: Red Maw Barracks
 Red Maw Barracks: Rally all 5
 // --
-Tyrolian Outpost: Reforged Plating
-Reforged Plating: Enhance all Armor 6
+Tyrolian Outpost: IronWill
 // --
 Ashrock Redoubt: Counterflux
 
