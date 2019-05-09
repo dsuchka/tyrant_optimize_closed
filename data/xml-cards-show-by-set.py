@@ -187,5 +187,13 @@ print("//  ***  Invisible Rewards  ***")
 displayForSet(5000)
 
 print()
+print("//  ***  Commanders  ***")
+displayForSet(7000)
+
+print()
+print("//  ***  Dominions  ***")
+displayForSet(8500)
+
+print()
 print("//  ***  Promotion (Exclusive)  ***")
 displayForSet(9000)
