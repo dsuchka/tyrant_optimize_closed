@@ -35,8 +35,9 @@ API_PATH = "api.php"
 
 
 STATIC_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:38.0) Gecko/20100101 Firefox/38.0",
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.96 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "DNT": "1",
     "Accept-Language": "en-US,en;q=0.5",
     "Accept-Encoding": 'gzip, compress',
     "Connection": "keep-alive",
@@ -45,10 +46,10 @@ STATIC_HEADERS = {
 
 
 BASIC_BODY_PARAMS = {
-    "unity": "Unity4_6_6",
-    "client_version": "68",
-    "device_type": "Intel(R)+Pentium(R)+4+CPU+2.40GHz+(7830+MB)",
-    "os_version": "Windows+XP+Service+Pack+3+(5.1.2600)",
+    "unity": "Unity5_4_2",
+    "client_version": "80",
+    "device_type": "Chrome+72.0.3626.96",
+    "os_version": "Linux+-",
     "platform": "Web",
 }
 
@@ -296,6 +297,34 @@ def getBattleResults(http, retries_on_empty=3):
     print("ERROR: getBattleResults: no data (all tries are spent)")
     return None
 
+def doSalvageCard(http, cid):
+    data = None
+    x = {"message": "salvageCard"}
+    x.update(PERSONAL_URL_PARAMS)
+    url_params = mkUrlParams(x)
+    x = {
+        "api_stat_name": x['message'],
+        "api_stat_time": str(randint(22,777)),
+        "data_usage": str(randint(11111, 888888)),
+        "timestamp": str(int(time.time())),
+        "card_id": str(cid),
+    }
+    x.update(BASIC_BODY_PARAMS)
+    x.update(PERSONAL_BODY_PARAMS)
+    body_params = mkUrlParams(x)
+    r = http.request(
+        'POST', '{}://{}/{}?{}'.format(PROTOCOL, API_HOST, API_PATH, url_params),
+        headers = STATIC_HEADERS,
+        decode_content = True,
+        preload_content = False,
+        body = body_params
+    )
+    data = r.read().decode("UTF-8")
+    if not data:
+        print("WARN: salvageCard: no response data")
+        return None
+    return json.loads(data)
+
 def getCardNameById(card_id):
     if card_id in id_to_card_name:
         return id_to_card_name[card_id]
@@ -459,12 +488,24 @@ with PoolManager(1,
         if not line:
             break
         line = line.strip().lower()
-        if line == 'exit':
+        args = re.split(r'\s+', line)
+        if args[0] == 'exit':
             break
-        if line == 'grab':
+        if args[0] == 'grab':
             doGrabLastDeck(http)
             continue
-        if line == 'hunt':
+        if args[0] == 'hunt':
             doHuntAndEnrichUserDb(http)
+            continue
+        if args[0] == 'salvage':
+            if len(args) < 2:
+                print("USAGE: salvage <card_id> [count]")
+                continue
+            cid = int(args[1])
+            count = 1 if len(args) < 3 else int(args[2])
+            for i in range(0, count):
+                rsp = doSalvageCard(http, cid)
+                sp = rsp['user_data']['salvage']
+            print("SP: {}".format(sp))
             continue
         print("ERROR: unknown command: {} (supported: [ grab | hunt | exit ])".format(line))

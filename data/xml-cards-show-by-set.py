@@ -173,7 +173,7 @@ displayForSet(4500)
 print()
 print("//  ***  PvP Rewards (hold)  ***")
 displayForSet(4501)
-            
+
 print()
 print("//  ***  Legacy PvE Rewards  ***")
 displayForSet(4700)
@@ -181,10 +181,18 @@ displayForSet(4700)
 print()
 print("//  ***  Legacy PvP Rewards  ***")
 displayForSet(4750)
-            
+
 print()
 print("//  ***  Invisible Rewards  ***")
 displayForSet(5000)
+
+print()
+print("//  ***  Commanders  ***")
+displayForSet(7000)
+
+print()
+print("//  ***  Dominions  ***")
+displayForSet(8500)
 
 print()
 print("//  ***  Promotion (Exclusive)  ***")

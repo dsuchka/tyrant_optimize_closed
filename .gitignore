@@ -27,6 +27,7 @@ tuo.exe
 *.gcov
 .coveralls.yml
 build-*
+tuo-*
 tuo-omp
 tuo-debug.exe
 tuodebug.exe

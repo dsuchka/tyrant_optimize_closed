@@ -74,6 +74,7 @@ namespace {
 	unsigned min_deck_len{1};
 	unsigned max_deck_len{10};
 	unsigned opt_freezed_cards{0};
+	unsigned freezed_cards{0};
 	unsigned fund{0};
 	long double target_score{100};
 	long double min_increment_of_score{0};
@@ -146,6 +147,7 @@ void init()
 	min_deck_len=1;
 	max_deck_len=10;
 	opt_freezed_cards=0;
+	freezed_cards=0;
 	fund=0;
 	target_score=100;
 	min_increment_of_score=0;
@@ -287,10 +289,6 @@ Java_de_neuwirthinformatik_Alexander_mTUO_TUOIntentService_stringFromJNI( JNIEnv
 }
 #endif
 using namespace std::placeholders;
-//------------------------------------------------------------------------------
-unsigned freezed_cards(const Deck* your_deck) {
-	return std::min<unsigned>(opt_freezed_cards, your_deck->cards.size());
-}
 void copy_deck(Deck* src,Deck* dst)
 {
 	dst->commander = src->commander;
@@ -1076,8 +1074,8 @@ class Process
 			bool compare_stop{false};
 			unsigned trials[c_num_threads] = {0};
 			long double successes [c_num_threads] = {.0};
-			const long double	max_possible =  max_possible_score[(size_t)optimization_mode];
-			const long double	prob =1-confidence_level;
+			const long double max_possible =  max_possible_score[(size_t)optimization_mode];
+			const long double prob =1-confidence_level;
 			omp_lock_t locks[c_num_threads];
 			for(unsigned  i =0; i < c_num_threads;++i)
 				omp_init_lock(&locks[i]);
@@ -1088,6 +1086,7 @@ class Process
 			{
 				SimulationData* sim = threads_data.at(omp_get_thread_num());
 				sim->set_decks(this->your_decks, this->enemy_decks);
+				const long double sim_accum = std::accumulate(sim->factors.begin(), sim->factors.end(),.0);
 #pragma omp for reduction(VecPlus:results) schedule(runtime)
 				for(unsigned i =0; i < thread_num_iterations;++i) {
 #pragma omp cancellation point for					
@@ -1096,11 +1095,9 @@ class Process
 							results =sim->evaluate();				//calculate single sim
 						else 
 							results =merge(results,sim->evaluate());				//calculate single sim
-
 						long double score_accum_d = 0.0;
 						for(unsigned j=0; j < results.size(); ++j)
 							score_accum_d+=results[j].points * sim->factors[j];
-						long double sim_accum = std::accumulate(sim->factors.begin(), sim->factors.end(),.0);
 						score_accum_d /= sim_accum*max_possible;
 						omp_set_lock(&locks[omp_get_thread_num()]);
 						trials[omp_get_thread_num()]++;
@@ -1135,7 +1132,6 @@ class Process
 						}
 					}
 				}
-				//todo parallel?
 #pragma omp for schedule(runtime)
 				for( unsigned i =0; i< results.size();++i)
 					evaluated_results.first[i] =results[i]; //+?
@@ -1941,6 +1937,8 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 	// use the best deck from all passed decks
 	copy_deck(filter_best_deck(your_decks, d1, best_score, evaluated_decks, zero_results, skipped_simulations, proc),d1);
 
+	// update freezed_cards
+	freezed_cards = std::min<unsigned>(opt_freezed_cards, d1->cards.size());
 	const Card* best_commander = d1->commander;
 	const Card* best_alpha_dominion = d1->alpha_dominion;
 	std::vector<const Card*> best_cards = d1->cards;
@@ -1997,8 +1995,8 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 
 
 	// << main climbing loop >>
-	for (unsigned from_slot(freezed_cards(d1)), dead_slot(freezed_cards(d1)); ;
-			from_slot = std::max(freezed_cards(d1), (from_slot + 1) % std::min<unsigned>(max_deck_len, best_cards.size() + 1)))
+	for (unsigned from_slot(freezed_cards), dead_slot(freezed_cards); ;
+			from_slot = std::max(freezed_cards, (from_slot + 1) % std::min<unsigned>(max_deck_len, best_cards.size() + 1)))
 	{
 		if(is_timeout_reached()){ break;}
 		if (deck_has_been_improved)
@@ -2073,7 +2071,7 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 		for (auto it = card_candidates.begin(); it != card_candidates.end();++it)
 		{
 			const Card* card_candidate = *it;
-			for (unsigned to_slot(is_random ? from_slot : card_candidate ? freezed_cards(d1) : (best_cards.size() - 1));
+			for (unsigned to_slot(is_random ? from_slot : card_candidate ? freezed_cards : (best_cards.size() - 1));
 					to_slot < (is_random ? (from_slot + 1) : (best_cards.size() + (from_slot < best_cards.size() ? 0 : 1)));
 					++ to_slot)
 			{
@@ -2141,6 +2139,8 @@ FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsig
 	// use the best deck from all passed decks
 	copy_deck(filter_best_deck(your_decks, cur_deck, best_score, evaluated_decks, zero_results, skipped_simulations, proc),cur_deck);
 
+	// update freezed_cards
+	freezed_cards = std::min<unsigned>(opt_freezed_cards, cur_deck->cards.size());
 
 	unsigned deck_cost = get_deck_cost(cur_deck);
 	fund = std::max(fund, deck_cost);
@@ -2194,8 +2194,8 @@ FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsig
 
 	deck_cost = 0;
 
-	unsigned from_slot(freezed_cards(cur_deck));
-	unsigned from_slot_tmp(freezed_cards(cur_deck));
+	unsigned from_slot(freezed_cards);
+	unsigned from_slot_tmp(freezed_cards);
 	unsigned to_slot(1);
 
 	if(debug_print >0)std::cout << "Starting Anneal" << std::endl;
@@ -2204,14 +2204,14 @@ FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsig
 		cur_deck->commander = prev_deck->commander;
 		cur_deck->alpha_dominion = prev_deck->alpha_dominion;
 		cur_deck->cards = prev_deck->cards;
-		from_slot = std::max(freezed_cards(cur_deck), (from_slot+1) % std::min<unsigned>(max_deck_len, cur_deck->cards.size() +1));
+		from_slot = std::max(freezed_cards, (from_slot+1) % std::min<unsigned>(max_deck_len, cur_deck->cards.size() +1));
 		const Card* candidate = all_candidates.at(std::uniform_int_distribution<unsigned>(0,all_candidates.size()-1)(re));
 
 
 		if((!candidate || (candidate->m_category == CardCategory::normal && candidate->m_type != CardType::commander && candidate->m_category != CardCategory::dominion_alpha)))
 		{
 
-			to_slot = std::uniform_int_distribution<unsigned>(is_random ? from_slot : candidate ? freezed_cards(cur_deck) : (cur_deck->cards.size() -1),(is_random ? (from_slot+1) : (cur_deck->cards.size() + ( from_slot < cur_deck->cards.size() ? 0 : 1)))-1)(re);
+			to_slot = std::uniform_int_distribution<unsigned>(is_random ? from_slot : candidate ? freezed_cards : (cur_deck->cards.size() -1),(is_random ? (from_slot+1) : (cur_deck->cards.size() + ( from_slot < cur_deck->cards.size() ? 0 : 1)))-1)(re);
 			if(candidate ?
 					(from_slot < cur_deck->cards.size() && (from_slot == to_slot && candidate == cur_deck->cards[to_slot]))
 					:
@@ -2337,8 +2337,8 @@ void mutate(Deck* src, Deck* cur_deck, std::vector<const Card*> all_candidates, 
 
 	unsigned deck_cost = 0;
 
-	unsigned from_slot(freezed_cards(cur_deck));
-	unsigned from_slot_tmp(freezed_cards(cur_deck));
+	unsigned from_slot(freezed_cards);
+	unsigned from_slot_tmp(freezed_cards);
 	unsigned to_slot(1);
 
 	bool finished = false;
@@ -2356,7 +2356,7 @@ void mutate(Deck* src, Deck* cur_deck, std::vector<const Card*> all_candidates, 
 		if((!candidate || (candidate->m_category == CardCategory::normal && candidate->m_type != CardType::commander && candidate->m_category != CardCategory::dominion_alpha)))
 		{
 
-			to_slot = std::uniform_int_distribution<unsigned>(is_random ? from_slot : candidate ? freezed_cards(cur_deck) : (cur_deck->cards.size() -1),(is_random ? (from_slot+1) : (cur_deck->cards.size() + ( from_slot < cur_deck->cards.size() ? 0 : 1)))-1)(re);
+			to_slot = std::uniform_int_distribution<unsigned>(is_random ? from_slot : candidate ? freezed_cards : (cur_deck->cards.size() -1),(is_random ? (from_slot+1) : (cur_deck->cards.size() + ( from_slot < cur_deck->cards.size() ? 0 : 1)))-1)(re);
 			if(candidate ?
 					(from_slot < cur_deck->cards.size() && (from_slot == to_slot && candidate == cur_deck->cards[to_slot]))
 					:
@@ -2856,7 +2856,7 @@ bool parse_bge(
 			if (passive_bge_id != PassiveBGE::no_bge)
 			{
 				// map bge id to its value (if present otherwise zero)
-				signed short bge_value = (tokens.size() > 1) ? boost::lexical_cast<signed short>(tokens[1]) : -1;
+				signed short bge_value = (tokens.size() > 1) ? boost::lexical_cast<signed short>(tokens[1]) : 1;
 				if (!bge_value)
 					throw std::runtime_error("BGE " + skill_name + ": zero value means no BGE");
 				if ((player == 0) or (player == 2))

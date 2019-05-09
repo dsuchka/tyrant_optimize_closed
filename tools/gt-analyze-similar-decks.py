@@ -1,19 +1,34 @@
 #!/usr/bin/python3
 
-import re
 import sys
+import os
+import re
+
+fname = sys.argv[1]
+if not os.path.isfile(fname):
+    raise Exception("Not a regular file: {}".format(fname))
+with_commander = 'no-commander' not in sys.argv[2:]
+with_dominion = 'no-dominion' not in sys.argv[2:]
 
 # 96.4578  GW_GT_DEF_107: Battlemaster Krellus, Alpha Scimitar, Silv...
 # Arena.Guild.<:-(nick)*(name)-:>: Battlemaster Krellus, Alpha Scimitar, Silv...
 DECK_FMT = re.compile("^(?P<prefix>(?P<points>\s*[0-9.]+\s+)?(?P<deck_name>.+?): )(?P<cards>.*)$")
 CARD_FMT = re.compile("^(?P<name>.+?)(?P<level>-\d)?\s*(?:\s+#(?P<count>\d+))?$")
 
-class NameCount:
-    def __init__(self, name, count):
+class NameCountType:
+    CARD_TYPE_COMMANDER = 1
+    CARD_TYPE_DOMINION = 2
+    CARD_TYPE_NORMAL = 3
+    def __init__(self, name, count, card_type):
         self.name = name
         self.count = count
+        self.card_type = card_type
+        if self.card_type != NameCountType.CARD_TYPE_NORMAL and self.count != 1:
+            raise ValueError("card_type={}: must have exactly one copy, but count={}".format(card_type, count))
     def __str__(self):
-        return "{} #{}".format(self.name, self.count)
+        if self.card_type == NameCountType.CARD_TYPE_NORMAL:
+            return "{} #{}".format(self.name, self.count)
+        return self.name
     def __repr__(self):
         return self.__str__()
 
@@ -21,20 +36,21 @@ class Deck:
     def __init__(self, name, cards, points):
         self.name = name
         self.cards = list(cards)
-        self.cards_commander = self.cards[0]
-        self.cards_dominion = None
-        self.cards_other = self.cards[1:]
-        if (self.cards[1].name.startswith("Alpha ") or self.cards[1].name.endswith(" Nexus")):
-            self.cards_dominion = self.cards[1]
-            self.cards_other = self.cards_other[1:]
-        self.cards_other.sort(key = lambda x: x.name)
+        self.commander = self.cards.pop(0) if self.cards[0].card_type == NameCountType.CARD_TYPE_COMMANDER else None
+        self.dominion = self.cards.pop(0) if self.cards[0].card_type == NameCountType.CARD_TYPE_DOMINION else None
+        self.cards.sort(key = lambda x: x.name)
         self.points = points
         self.name2card = dict([(c.name, c) for c in cards])
+        if not self.commander:
+            raise ValueError("no commander for name={}".format(name))
+        for c in self.cards:
+            if c.card_type != NameCountType.CARD_TYPE_NORMAL:
+                raise ValueError("deck contains non-normal card: name={}: card -> {}".format(name, c))
     def __str__(self):
-        cards = [self.cards_commander]
-        if self.cards_dominion is not None:
-            cards.append(self.cards_dominion)
-        cards.extend(self.cards_other)
+        cards = [self.commander]
+        if self.dominion is not None:
+            cards.append(self.dominion)
+        cards.extend(self.cards)
         cards_view = "<{:02d} unt> {}".format(self.cardsCount(), str(cards))
         if self.points is None:
             return "({}) {}".format(self.name, cards_view)
@@ -48,30 +64,38 @@ class Deck:
             count += card.count
         return count
     def similarity_points(self, that):
-        denominator = self.cardsCount() * that.cardsCount()
-        if not denominator:
-            return 0
-        value = 0
-        def calc_value(x1, x2, scale):
-            res = 0
-            for name in x1.name2card.keys():
-                if name not in x2.name2card:
-                    continue
-                card1 = x1.name2card[name]
-                card2 = x2.name2card[name]
-                x_count = min(card1.count, card2.count)
-                res += x_count * scale
-            return res
-        value += calc_value(self, that, that.cardsCount())
-        value += calc_value(that, self, self.cardsCount())
-        return value / float(2.0 * denominator)
+        cmd_points = 1.0
+        if with_commander:
+            if self.commander.name != that.commander.name:
+                cmd_points = 0.95
+        dom_points = 1.0
+        if with_dominion:
+            if self.dominion.name != that.dominion.name:
+                dom_points = 0.9
+        max_cards_len = max(self.cardsCount(), that.cardsCount())
+        common_cards = 0
+        diff_cards = 0
+        cards_1 = dict([(c.name, c.count) for c in self.cards])
+        cards_2 = dict([(c.name, c.count) for c in that.cards])
+        keys = set(list(cards_1.keys()) + list(cards_2.keys()))
+        for name in keys:
+            count_1 = cards_1[name] if name in cards_1 else 0
+            count_2 = cards_2[name] if name in cards_2 else 0
+            diff = abs(count_1 - count_2)
+            diff_cards += diff
+            common_cards += max(count_1, count_2) - diff
+        diff_len = max_cards_len - common_cards
+        if diff_len:
+            value = (common_cards * 2.0 + (diff_cards / (diff_len * 2.0))) / (max_cards_len * 2.0)
+        else:
+            value = common_cards / max_cards_len
+        return value * cmd_points * dom_points
 
 class CmpResult:
     def __init__(self, deck_pair, points):
         self.deck_pair = deck_pair
         self.points = points
 
-fname = sys.argv[1]
 decks = {}
 with open(fname, 'r') as f:
     for line in f:
@@ -92,7 +116,12 @@ with open(fname, 'r') as f:
             if name in n2c:
                 n2c[name].count += count
             else:
-                n2c[name] = NameCount(name, count)
+                card_type = NameCountType.CARD_TYPE_NORMAL
+                if len(cards) == 0:
+                    card_type = NameCountType.CARD_TYPE_COMMANDER
+                elif len(cards) == 1 and ((name.startswith("Alpha ") or name.endswith(" Nexus"))):
+                    card_type = NameCountType.CARD_TYPE_DOMINION
+                n2c[name] = NameCountType(name, count, card_type)
                 cards.append(n2c[name])
         if len(cards) <= 1:
             continue

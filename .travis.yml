@@ -13,16 +13,23 @@ matrix:
         packages:
           - gcc-7
           - g++-7
-
+  - env:
+    - TUO_PLATFORM='macXX'
+    os: osx
+    
 before_install:
   # src: https://stackoverflow.com/a/49412522
   # Export CC and CXX to tell cmake which compiler to use
-  - export CC=gcc-7
-  - export CXX=g++-7
-  # Check versions of gcc, g++ and cmake
-  - gcc -v && g++ -v && cmake --version
-  # Run your build commands next
   - TUO_TARGET="${TUO_PLATFORM::${#TUO_PLATFORM}-2}"
+  - |
+    if [ $TUO_TARGET == "windows" ] ; then
+        export CC=gcc-7
+        export CXX=g++-7
+      
+        # Check versions of gcc, g++ and cmake
+        gcc -v && g++ -v && cmake --version
+    fi
+  # Run your build commands next
   - "./build/${TUO_TARGET}/requirements.sh"
 
 install:
@@ -43,6 +50,7 @@ deploy:
   file_glob: true
   file:
     - ./*.exe
+    - ./*.osx
     - "${TUO_FILE_ZIP}"
   skip_cleanup: true
   on:

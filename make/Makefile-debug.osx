@@ -1,4 +1,4 @@
-MAIN := tuodebug.osx
+MAIN := tuo-debug.osx
 SRCS := $(wildcard *.cpp)
 OBJS := $(patsubst %.cpp,obj-debug/%.o,$(SRCS))
 INCS := $(wildcard *.h)

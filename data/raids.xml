@@ -873,7 +873,32 @@
             </always_include>
         </deck>
     </raid>
-  
+   <raid>
+        <id>66</id>
+        <name>Exoscaper Raid</name>
+        <levels>26</levels>
+        <commander>26176</commander>
+        <fortress_pool amount="2">   
+            <card replicates="1">18898</card>
+            <card replicates="1">18908</card>
+            <card replicates="1">18918</card>
+   <!-- 18928 is summoned from 18918 -->
+            <card replicates="1">18938</card>
+        </fortress_pool>
+        <deck>
+            <card_pool amount="10">
+    <!-- Vind -->
+                <card replicates="2">64184</card>
+                <card replicates="2">64194</card>
+                <card replicates="2">64204</card>
+                <card replicates="2">64214</card>
+    <!-- Mythic -->
+                <card replicates="1">64224</card>
+                <card replicates="1">64234</card>
+                <card replicates="1">64244</card>
+            </card_pool>
+        </deck>
+    </raid>
  
   <!-- END of Raids -->
   <!-- Campaigns -->
