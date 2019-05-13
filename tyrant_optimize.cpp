@@ -1052,7 +1052,7 @@ class Process
 				sim->set_decks(this->your_decks, this->enemy_decks);
 #pragma omp for reduction(VecPlus:results) schedule(runtime)
 				for(unsigned i =0; i < thread_num_iterations;++i) {
-					if(results.size()==0) 
+					if(results.size()==0)
 						results =sim->evaluate();				//calculate single sim
 					else {
 						results =merge(results,sim->evaluate());				//calculate single sim
@@ -1089,11 +1089,11 @@ class Process
 				const long double sim_accum = std::accumulate(sim->factors.begin(), sim->factors.end(),.0);
 #pragma omp for reduction(VecPlus:results) schedule(runtime)
 				for(unsigned i =0; i < thread_num_iterations;++i) {
-#pragma omp cancellation point for					
+#pragma omp cancellation point for
 					if(!compare_stop){
-						if(results.size()==0) 
+						if(results.size()==0)
 							results =sim->evaluate();				//calculate single sim
-						else 
+						else
 							results =merge(results,sim->evaluate());				//calculate single sim
 						long double score_accum_d = 0.0;
 						for(unsigned j=0; j < results.size(); ++j)
@@ -1140,7 +1140,7 @@ class Process
 			for(unsigned i =0; i < c_num_threads;++i)
 				omp_destroy_lock(&locks[i]);
 		}
-		
+
 
 		static std::vector<Results<uint64_t>> merge(std::vector<Results<uint64_t>> out, std::vector<Results<uint64_t>> in)
 		{
@@ -2746,6 +2746,7 @@ void print_available_effects()
 		"  Unity\n"
 		"  Devotion\n"
 		"  Crackdown\n"
+		"  SuperHeroism\n"
 		;
 }
 bool check_input_amount(int argc, char** argv, int argIndex,int number)
@@ -3565,7 +3566,6 @@ FinalResults<long double> run(int argc, char** argv)
 		}
 		else if (strcmp(argv[argIndex], "debug") == 0)
 		{
-			if(check_input_amount(argc,argv,argIndex,1))exit(1);
 			opt_todo.push_back(std::make_tuple(0u, 0u, debug));
 			opt_num_threads = 1;
 		}

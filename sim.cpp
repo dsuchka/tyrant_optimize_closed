@@ -2631,6 +2631,18 @@ bool check_and_perform_bravery(Field* fd, CardStatus* src)
 #endif
         _DEBUG_MSG(1, "%s activates Bravery %u\n", status_description(src).c_str(), bravery_value);
         src->m_perm_attack_buff += bravery_value;
+
+        //BGE: superheroism
+        if (__builtin_expect(fd->bg_effects[fd->tapi][PassiveBGE::superheroism], false))
+        {
+            unsigned bge_value = bravery_value;
+            const SkillSpec ss_heal{Skill::heal, bge_value, allfactions, 0, 0, Skill::no_skill, Skill::no_skill, true, 0,};
+            _DEBUG_MSG(1, "%s activates SuperHeroism: %s\n", status_description(src).c_str(),
+                    skill_description(fd->cards, ss_heal).c_str());
+            //fd->skill_queue.emplace(fd->skill_queue.begin()+0, src, ss_heal);
+            skill_table[Skill::heal](fd,src,ss_heal); //Probably better to perform the skill direct instead of queuing it
+        }
+
         return true;
     }
     return false;

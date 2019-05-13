@@ -14,7 +14,7 @@ FileDelete, %file%
 
 MaxCardsSections := 100
 
-BGEffects := "none|Crackdown|Devotion|Unity|Iron-Will|Cold-Sleep|Blood-Vengeance|Oath-of-Loyalty|Furiosity|TemporalBacklash|CriticalReach|Devour|HaltedOrders|ZealotsPreservation|Virulence|Enfeeble all X|Enhance all S X|Evolve n S1 S2|Heal all X|Mortar X|Protect all X|Rally all X|Siege all X|Strike all X|Weaken all X|Brigade|Bloodlust X|Counterflux|Divert|EnduringRage|Fortification|Heroism|Metamorphosis|Megamorphosis|Revenge X|TurningTides"
+BGEffects := "none|SuperHeroism|Crackdown|Devotion|Unity|Iron-Will|Cold-Sleep|Blood-Vengeance|Oath-of-Loyalty|Furiosity|TemporalBacklash|CriticalReach|Devour|HaltedOrders|ZealotsPreservation|Virulence|Enfeeble all X|Enhance all S X|Evolve n S1 S2|Heal all X|Mortar X|Protect all X|Rally all X|Siege all X|Strike all X|Weaken all X|Brigade|Bloodlust X|Counterflux|Divert|EnduringRage|Fortification|Heroism|Metamorphosis|Megamorphosis|Revenge X|TurningTides"
 IniFileName := "data\SimpleTUOptimizeStarter.ini"
 IniSection := "onLoad"
 
@@ -119,7 +119,7 @@ Gui, Add, Checkbox, vCommander Checked%IniCommander%, Commander lock
 Gui, Add, Edit, vSimOptions r1 xs w600, %IniSimOptions%
 Gui, Add, Button, default r2 w100 x100 y+15 section, Simulate
 Gui, Add, Checkbox, vx86 Checked%Inix86%, x86 (32-bit)
-Gui, Add, Checkbox, vopenmp Checked%IniOpenMP%, openmp 
+Gui, Add, Checkbox, vopenmp Checked%IniOpenMP%, openmp
 Gui, Add, Button, r2 w100 ys xs+200, Exit
 Gui, Add, Checkbox, vdebug Checked%IniDebug%, debug
 Gui, Add, Checkbox, vtime Checked%IniTime%, time

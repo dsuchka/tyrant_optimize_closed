@@ -85,7 +85,7 @@ enum PassiveBGE
     bloodlust, brigade, counterflux, divert, enduringrage, fortification, heroism,
     zealotspreservation, metamorphosis, megamorphosis, revenge, turningtides, virulence,
     haltedorders, devour, criticalreach, temporalbacklash, furiosity, oath_of_loyalty,
-    bloodvengeance, coldsleep,ironwill,unity,devotion,crackdown,
+    bloodvengeance, coldsleep,ironwill,unity,devotion,crackdown,superheroism,
 
     // End of BGEs
     num_passive_bges
