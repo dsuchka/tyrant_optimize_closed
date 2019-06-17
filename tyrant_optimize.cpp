@@ -1449,9 +1449,10 @@ void print_upgraded_cards(Deck* deck)
 //------------------------------------------------------------------------------
 void print_cards_inline(std::vector<const Card*> cards)
 {
-	std::string last_name;
+	std::string last_name="";
 	unsigned num_repeat(0);
 	bool first = true;
+	
 	for (const Card* card: cards)
 	{
 		if (card->m_name == last_name)
@@ -2651,7 +2652,7 @@ void recursion(unsigned num_iterations, std::vector<unsigned> used, unsigned poo
 		}
 		auto compare_results= proc.evaluate(num_iterations, prev_results);
 		auto current_score = compute_score(compare_results, proc.factors);
-
+		
 		if(current_score.points > best_score.points+min_increment_of_score) {
 			best_score = current_score;
 			std::vector<const Card*> copy_forts(proc.your_decks[0]->fortress_cards);
@@ -2690,7 +2691,7 @@ FinalResults<long double> forts_climbing(unsigned num_iterations, Process& proc)
 	std::vector<unsigned> used;
 	used.reserve(pool);
 	std::vector<const Card*> best_forts{pool};
-	FinalResults<long double> best_score;
+	FinalResults<long double> best_score{0, 0, 0, 0, 0, 0, 0};
 	unsigned long skipped_simulations{0};
 	std::unordered_map<std::string,EvaluatedResults> evaluated_decks{{"",zero_results}};
 	recursion(num_iterations,used,pool,forts, proc,best_score,best_forts,evaluated_decks,zero_results,skipped_simulations);
@@ -3275,6 +3276,9 @@ FinalResults<long double> run(int argc, char** argv)
 		{
 			if(check_input_amount(argc,argv,argIndex,1))exit(1);
 			opt_num_threads = atoi(argv[argIndex+1]);
+#ifdef _OPENMP
+			omp_set_num_threads(opt_num_threads);
+#endif
 			argIndex += 1;
 		}
 		else if (strcmp(argv[argIndex], "target") == 0)
@@ -3584,9 +3588,11 @@ FinalResults<long double> run(int argc, char** argv)
 			exit(1);
 		}
 	}
+
 #ifdef _OPENMP
-	omp_set_num_threads(opt_num_threads);
+	opt_num_threads = omp_get_max_threads();
 #endif
+
 	Cards all_cards;
 	Decks decks;
 	std::unordered_map<std::string, std::string> bge_aliases;

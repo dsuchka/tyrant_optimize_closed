@@ -23,6 +23,7 @@ out.*
 tuo.exe
 *.ini
 *.swp
+*.swo
 *.stackdump
 *.gcov
 .coveralls.yml

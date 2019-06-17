@@ -1,4 +1,5 @@
 // exec: ./tuo-test , verbose: ./tuo-test --log_level=all
+// set-iterations ./tuo-test 100  , default = 10 // more than 100 cause errors
 #ifdef TEST
 #ifdef NQUEST // only without quests
 #define BOOST_TEST_DYN_LINK
@@ -21,6 +22,10 @@
 using namespace std;
 namespace bdata = boost::unit_test::data;
 typedef std::tuple<FinalResults<long double>,std::string,double> Result; // score, output, time
+int iter = 10;
+unsigned seed = 0;
+//limit for float diffing
+double eps = 0.0000001;
 
 //pipe output: https://stackoverflow.com/questions/5405016/can-i-check-my-programs-output-with-boost-test
 struct ios_redirect {
@@ -73,11 +78,15 @@ inline Result run_sim(int argc,const char** argv, bool pipe_output=true)
     }
     else{
         //no guard here
-
-        char** param = new char*[argc];
-        for(int i = 0; i < argc;i++)
+		  //////////////////////
+          // only single thread, else crashes
+          //////////////////////
+        char** param = new char*[argc+2];
+          for(int i = 0; i < argc;i++)
             param[i] = const_cast<char*>(argv[i]);
-        fr = run(argc,param);
+          param[argc] = const_cast<char*>("-t");
+          param[argc+1] = const_cast<char*>("1");
+        fr = run(argc+2,param);
     }
   }
 
@@ -89,9 +98,9 @@ inline Result run_sim(int argc,const char** argv, bool pipe_output=true)
 
 inline void check_win(Result result) {
     BOOST_CHECK_MESSAGE(
-      1==std::get<0>(result).wins &&
-      0==std::get<0>(result).losses &&
-      0==std::get<0>(result).draws
+      1-eps<=std::get<0>(result).wins &&
+      eps>=std::get<0>(result).losses &&
+      eps>=std::get<0>(result).draws
       ,std::get<1>(result));
     //BOOST_CHECK(100==result.points);
 }
@@ -100,15 +109,25 @@ inline void check_win_sim(TestInfo ti) {
     /////////////
     // Max. Iter == 100, else check_win fails with integer vs double equal in check_win
     ////////////
-    const char* argv[] = {"tuo",ti.your_deck.c_str(),ti.enemy_deck.c_str(),"-e",ti.bge.c_str(),"sim", "10"}; //TODO hardcoded iterations? //much output on error?! // better 100 iterations for test, 10 for checking errors
+    string s = std::to_string(iter);
+    char * ii = new char[s.length()];
+    strcpy(ii,s.c_str());
+    s = std::to_string(seed);
+    char * iii = new char[s.length()];
+    strcpy(iii,s.c_str());
+    const char* argv[] = {"tuo",ti.your_deck.c_str(),ti.enemy_deck.c_str(),"-e",ti.bge.c_str(),"sim", ii,"seed", iii}; //TODO hardcoded iterations? //much output on error?! // better 100 iterations for test, 10 for checking errors
     Result result(run_sim(sizeof(argv)/sizeof(*argv),argv));
+    delete ii;
+	delete iii;
     //result.second += "\nTest: " + ti.your_deck + "; " + ti.enemy_deck + "; " + ti.bge;
     check_win(result);
 }
 
 inline void genetic(std::string gnt1,std::string gnt2){
-
-    const char* argv[] = {"tuo",gnt1.c_str(),gnt2.c_str(),"_test","brawl","genetic","10", "-t", "4"};
+    string s = std::to_string(iter);
+    char * ii = new char[s.length()];
+    strcpy(ii,s.c_str());
+    const char* argv[] = {"tuo",gnt1.c_str(),gnt2.c_str(),"brawl","genetic",ii};
     Result result(run_sim(sizeof(argv)/sizeof(*argv),argv,false));
     std::ofstream mf;
     mf.open("out.csv", std::ios_base::app);
@@ -159,13 +178,25 @@ BOOST_AUTO_TEST_CASE(test_genetic)
 BOOST_AUTO_TEST_SUITE_END()
 */
 
-BOOST_AUTO_TEST_SUITE(test_sim)
+
+BOOST_AUTO_TEST_SUITE(test_sim )
 BOOST_AUTO_TEST_CASE(test_sim_init)
 {
     init();
     debug_print++;
     debug_cached++;
     debug_line =true;
+	seed=std::chrono::system_clock::now().time_since_epoch().count() * 2654435761;
+    if(boost::unit_test::framework::master_test_suite().argc>=2)
+    {
+        iter = atoi(boost::unit_test::framework::master_test_suite().argv[1]);
+    }
+	if(boost::unit_test::framework::master_test_suite().argc>=3)
+	{		
+		seed=atoi(boost::unit_test::framework::master_test_suite().argv[2]);
+	}
+	BOOST_TEST_MESSAGE("ITER: " << iter);
+	BOOST_TEST_MESSAGE("SEED: " << seed);
     BOOST_CHECK(1==1);//..
 }
 
@@ -199,6 +230,29 @@ BOOST_DATA_TEST_CASE(test_whole_decks,bdata::make(read_test_file("tests/test_who
    check_win_sim(ti);
 }
 BOOST_AUTO_TEST_SUITE_END()
+
+
+BOOST_AUTO_TEST_SUITE(test_crashes)
+BOOST_AUTO_TEST_CASE(test_crashes)
+{
+    eps=1.; //only check for crashes now
+    std::vector<std::vector<TestInfo>> aati;
+    //aati.emplace_back(read_test_file("tests/test_whole_decks.csv"));
+    //aati.emplace_back(read_test_file("tests/test_bges.csv"));
+    //aati.emplace_back(read_test_file("tests/test_multi_units.csv"));
+    aati.emplace_back(read_test_file("tests/test_crash.csv"));
+    std::string decks="";
+    for(auto t=aati.begin(); t!=aati.end(); ++t)
+      for(auto tt=t->begin(); tt!=t->end(); ++tt)
+          decks += tt->your_deck + ";" + tt->enemy_deck + ";";
+    TestInfo ti;
+    ti.your_deck=decks;
+    ti.enemy_deck=decks;
+    ti.bge="";
+    check_win_sim(ti);
+}
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE_END()
 
 /*

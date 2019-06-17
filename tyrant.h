@@ -40,7 +40,7 @@ enum Skill
     enfeeble, jam, mortar, siege, strike, sunder, weaken,
 
     // Activation (helpful):
-    enhance, evolve, heal, mend, overload, protect, rally, fortify,
+    evolve, heal, mend, overload, protect, rally, fortify,
     enrage, entrap, rush,
 
     // Activation (unclassified/polymorphic):
@@ -54,10 +54,13 @@ enum Skill
     coalition, legion, pierce, rupture, swipe, drain, venom, hunt,mark,
 
     // Damage-Dependent:
-    berserk, inhibit, sabotage, leech, poison,disease,
+    berserk,  leech, poison,
+
+    // Instant-Debuff:
+    inhibit, sabotage, disease,
 
     // Triggered:
-    allegiance, flurry, valor, stasis, summon, bravery,
+    allegiance, flurry, valor, stasis, summon, bravery, enhance,
 
     // End of skills
     num_skills
@@ -223,16 +226,26 @@ inline bool is_combat_modifier_skill(Skill::Skill skill_id)
     }
 }
 
+inline bool is_instant_debuff_skill(Skill::Skill skill_id)
+{
+    switch(skill_id)
+    {
+    case Skill::inhibit:
+    case Skill::sabotage:
+    case Skill::disease:
+        return true;
+    default:
+        return false;
+    }
+}
+
 inline bool is_damage_dependent_skill(Skill::Skill skill_id)
 {
     switch(skill_id)
     {
     case Skill::berserk:
-    case Skill::inhibit:
-    case Skill::sabotage:
     case Skill::leech:
     case Skill::poison:
-    case Skill::disease:
         return true;
     default:
         return false;

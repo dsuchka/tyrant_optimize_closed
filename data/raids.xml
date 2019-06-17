@@ -899,7 +899,30 @@
             </card_pool>
         </deck>
     </raid>
- 
+    <raid>
+        <id>68</id>
+        <name>Sentinel Icarus Raid</name>
+        <levels>26</levels>
+        <commander>26216</commander>
+        <fortress_pool amount="2">
+            <card replicates="1">18954</card>
+            <card replicates="1">18964</card>
+        </fortress_pool>
+        <deck>
+            <card_pool amount="10">
+    <!-- Vind -->
+                <card replicates="2">64542</card>
+                <card replicates="2">64552</card>
+                <card replicates="2">64562</card>
+                <card replicates="2">64572</card>
+    <!-- Mythic -->
+                <card replicates="1">64582</card>
+                <card replicates="1">64592</card>
+                <card replicates="1">64602</card>
+            </card_pool>
+        </deck>
+    </raid>
+
   <!-- END of Raids -->
   <!-- Campaigns -->
   <campaign>

@@ -15,7 +15,7 @@ const std::string skill_names[Skill::num_skills] =
     "Enfeeble", "Jam", "Mortar", "Siege", "Strike", "Sunder", "Weaken",
 
     // Activation (helpful):
-    "Enhance", "Evolve", "Heal", "Mend", "Overload", "Protect", "Rally", "Fortify",
+    "Evolve", "Heal", "Mend", "Overload", "Protect", "Rally", "Fortify",
     "Enrage", "Entrap", "Rush",
 
     // Activation (unclassified/polymorphic):
@@ -29,10 +29,12 @@ const std::string skill_names[Skill::num_skills] =
     "Coalition", "Legion", "Pierce", "Rupture", "Swipe", "Drain", "Venom", "Hunt","Mark",
 
     // Damage-Dependant:
-    "Berserk", "Inhibit", "Sabotage", "Leech", "Poison","Disease",
+    "Berserk", "Leech", "Poison",
 
+    // Instant-Debuff:
+    "Inhibit", "Sabotage", "Disease",
     // Triggered:
-    "Allegiance", "Flurry", "Valor", "Stasis", "Summon", "Bravery",
+    "Allegiance", "Flurry", "Valor", "Stasis", "Summon", "Bravery", "Enhance",
 };
 
 const std::string skill_trigger_names[Skill::num_triggers] =
