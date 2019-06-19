@@ -3,7 +3,7 @@
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 
-VersionOfStarter := "v2.58.10"
+VersionOfStarter := "v2.64.0"
 
 VersionOfTUO := ""
 file = %A_temp%\version.tmp
@@ -92,7 +92,7 @@ if (IniEffectNum = 0) {
 
 Gui, Add, ComboBox, vEffect xs Choose%IniEffectNum% section, %BGEffects%
 Gui, Add, DDL, altsubmit vMode Choose%IniMode%, Battle / Mission|Battle (defense)|GW|GW (defense)|Brawl|Brawl (defense)|Raid|Campaign|CQ / Surge
-Gui, Add, DDL, altsubmit vOperation Group Choose%IniOperation% xs, Climb|Sim|Reorder|Climbex|Anneal|Debug|Climb_Forts|Genetic
+Gui, Add, DDL, altsubmit vOperation Group Choose%IniOperation% xs, Climb|Sim|Reorder|Climbex|Anneal|Debug|Climb_Forts|Genetic|Beam
 Gui, Add, DDL, altsubmit vDominion Group Choose%IniDominion% xs, dom-owned|dom-maxed|dom-none
 Gui, Add, DDL, altsubmit vStrategy Group Choose%IniStrategy%, none|recent|jam|mortar|siege|strike|sunder|weaken|enhance|evolve|heal|mend|overload|protect|rally|fortify|enrage|entrap|rush|mimic|armor|avenge|scavenge|corrosive|counter|evade|subdue|absorb|flying|payback|revenge|tribute|refresh|wall|barrier|coalition|legion|pierce|rupture|swipe|drain|venom|hunt|berserk|inhibit|sabotage|leech|poison|allegiance|flurry|valor|stasis|summon|bravery|enfeeble|mark|disease
 
@@ -144,7 +144,7 @@ Gui, Submit, NoHide ; save the changes and not hide the windows)
 selTUO := "tuo" . (x86 ? "-x86" : "") . (openmp ? "-openmp" : "") . (debug ? "-debug" : (time ? "-time" : "")) . ".exe"
 selMode := (Mode == 1 ? "pvp" : Mode == 2 ? "pvp-defense" : Mode == 3 ? "gw" : Mode == 4 ? "gw-defense" :Mode == 5 ? "brawl" : Mode == 6 ? "brawl-defense" : Mode == 7 ? "raid" : Mode == 8 ? "campaign" : "surge")
 selOrder := (Order == 1 ? "random" : Order == 2 ? "ordered" : "flexible")
-selOperation :=  (Operation == 1 ? "climb" : Operation == 2 ? "sim" : Operation == 3 ? "reorder": Operation == 4 ? "climbex" : Operation == 5 ? "anneal" : Operation==6 ? "debug sim" : Operation==7 ?"climb_forts" : "genetic")
+selOperation :=  (Operation == 1 ? "climb" : Operation == 2 ? "sim" : Operation == 3 ? "reorder": Operation == 4 ? "climbex" : Operation == 5 ? "anneal" : Operation==6 ? "debug sim" : Operation==7 ?"climb_forts" : Operation==8 ? "genetic":"beam")
 selMySiege := (MySiege == "" ? "" : "yf """ MySiege """ ")
 selEnemySiege := ( EnemySiege == "" ? "" : "ef """ EnemySiege """ ")
 selVIP := ( VIP == "" ? "" : "vip """ VIP """ " )

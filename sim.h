@@ -54,6 +54,16 @@ struct FinalResults
     uint64_t n_sims;
 };
 
+template<typename result_type>
+bool operator >(const FinalResults<result_type>& x, const FinalResults<result_type>& y) {
+    return x.points > y.points;
+}
+
+template<typename result_type>
+bool operator <(const FinalResults<result_type>& x, const FinalResults<result_type>& y) {
+    return x.points < y.points;
+}
+
 void fill_skill_table();
 Results<uint64_t> play(Field* fd, bool skip_init=false);
 // Pool-based indexed storage.
