@@ -3312,6 +3312,18 @@ Results<uint64_t> play(Field* fd,bool skip_init)
 
         }//>>> end skip init
         else { skip_init = false;}
+
+        //Skill: Enhance
+        //Perform later enhance for commander
+        check_and_perform_later_enhance(fd,&fd->tap->commander);
+        auto& structures(fd->tap->structures);
+        for(unsigned index(0); index < structures.size(); ++index)
+        {
+            CardStatus * status = &structures[index];
+            //enhance everything else after card was played
+            check_and_perform_later_enhance(fd,status);
+        }
+
         // Play a card
         const Card* played_card(fd->tap->deck->next(fd));
         if (played_card)
@@ -3351,16 +3363,6 @@ Results<uint64_t> play(Field* fd,bool skip_init)
         //-------------------------------------------------
         // Phase: (Later-) Enhance, Inhibit, Sabotage, Disease
         //-------------------------------------------------
-        //Skill: Enhance
-        //Perform later enhance for commander
-        check_and_perform_later_enhance(fd,&fd->tap->commander);
-        auto& structures(fd->tap->structures);
-        for(unsigned index(0); index < structures.size(); ++index)
-        {
-            CardStatus * status = &structures[index];
-            //enhance everything else after card was played
-            check_and_perform_later_enhance(fd,status);
-        }
         //Perform Inhibit, Sabotage, Disease
         auto& assaults(fd->tap->structures);
         for(unsigned index(0); index < assaults.size(); ++index)
