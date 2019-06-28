@@ -2620,11 +2620,11 @@ bool check_and_perform_enhance(Field* fd, CardStatus* src, bool early)
 }
 bool check_and_perform_early_enhance(Field* fd, CardStatus* src)
 {
-      return check_and_perform_enhance(fd,src,true);
+      return false; //check_and_perform_enhance(fd,src,true);
 }
 bool check_and_perform_later_enhance(Field* fd, CardStatus* src)
 {
-      return check_and_perform_enhance(fd,src,false);
+      return false; //check_and_perform_enhance(fd,src,false);
 }
 bool check_and_perform_valor(Field* fd, CardStatus* src)
 {
