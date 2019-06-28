@@ -128,7 +128,7 @@ inline bool is_activation_helpful_skill(Skill::Skill skill_id)
 {
     switch(skill_id)
     {
-    case Skill::enhance:
+    //case Skill::enhance:
     case Skill::evolve:
     case Skill::heal:
     case Skill::mend:
@@ -167,7 +167,7 @@ inline bool is_activation_skill_with_x(Skill::Skill skill_id)
     case Skill::strike:
     case Skill::sunder:
     case Skill::weaken:
-    case Skill::enhance:
+    //case Skill::enhance:
     case Skill::mimic:
     case Skill::heal:
     case Skill::mend:

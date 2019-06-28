@@ -2640,8 +2640,7 @@ bool check_and_perform_enhance(Field* fd, CardStatus* src, bool early)
       {
           if(ss.id != Skill::enhance)continue;
           if(early ^ (ss.s == Skill::allegiance || ss.s == Skill::absorb ||ss.s == Skill::stasis || ss.s == Skill::bravery))continue; //only specified skills are 'early'
-          fd->skill_queue.emplace_back(src, ss);
-          resolve_skill(fd);
+          skill_table[ss.id](fd,src,ss);
       }
       return true;
 }
