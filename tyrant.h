@@ -424,7 +424,7 @@ std::string to_string(const T val)
     return s.str();
 }
 
-inline uint8_t byte_bits_count(register uint8_t i)
+inline uint8_t byte_bits_count(uint8_t i)
 {
     i = i - ((i >> 1) & 0x55);
     i = (i & 0x33) + ((i >> 2) & 0x33);

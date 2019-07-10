@@ -12,11 +12,11 @@ endif
 endif
 
 
-CPPFLAGS := -Wall -Werror -std=gnu++11 -Ofast -DNDEBUG -DNQUEST -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)"' -fopenmp
-LDFLAGS := -lboost_system -lboost_thread -lboost_filesystem -lboost_regex -lboost_timer -lpthread -lgomp 
+CPPFLAGSN := -Wall -Werror -std=gnu++11 -Ofast -DNDEBUG -DNQUEST -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)"' -fopenmp
+LDFLAGSN := -lboost_system -lboost_thread -lboost_filesystem -lboost_regex -lboost_timer -lpthread -lgomp 
 
-CPPFLAGSN := -Wall -Werror -std=gnu++11 -Ofast -DNDEBUG -DNQUEST -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)"'
-LDFLAGSN := -lboost_system -lboost_thread -lboost_filesystem -lboost_regex -lboost_timer -lpthread
+CPPFLAGS := -Wall -Werror -std=gnu++11 -Ofast -DNDEBUG -DNQUEST -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)"'
+LDFLAGS := -lboost_system -lboost_thread -lboost_filesystem -lboost_regex -lboost_timer -lpthread
 
 all: $(MAIN)
 

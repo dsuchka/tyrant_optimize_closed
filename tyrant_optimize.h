@@ -4,8 +4,16 @@
 #include <iostream>
 #include <boost/thread/thread.hpp>
 #include <chrono>
+// OpenMP Header
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+// Android Headers
+#if defined(ANDROID) || defined(__ANDROID__)
+#include <jni.h>
+#include <android/log.h>
+#endif
 //------------------------------------------------------------------------------
-
 
 struct Requirement
 {
