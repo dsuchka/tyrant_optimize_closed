@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FUND=0 #1100 #6000 #4000 #6000 #10000
+FUND=999999
 
 RUN_BRAWL=0
 RUN_ARENA=1
@@ -9,128 +9,149 @@ RUN_ATTACK=1
 RUN_DEFENSE=1
 
 RANDOM_ATTACK=0
+DO_ANNEAL=0
 
-ATTACK_ITERS=(13 200)
-DEFENSE_ITERS=(33 500)
+#ATTACK_ITERS=(17 300)
+ATTACK_ITERS=(36 250)
+#ATTACK_ITERS=(256 256)
+DEFENSE_ITERS=(33 1188)
+#ATTACK_ITERS=(21 500)
+#DEFENSE_ITERS=(38 1000)
+#ITER_MUL=3
+
+THREADS=3
 
 ((RANDOM_ATTACK)) && ATTACK_ITERS=("${DEFENSE_ITERS[@]}")
 
+declare -a ATK_COMMANDERS=(any)
 
-ATK_COMMANDERS=(any)
-#ATK_COMMANDERS+=(any_{sunder,coalition})
-#ATK_COMMANDERS+=(any_{rt,imp,coa})
-#ATK_COMMANDERS+=(ded)
-#ATK_COMMANDERS+=(const)
-#ATK_COMMANDERS+=(nexor)
-ATK_COMMANDERS+=(silus)
-#ATK_COMMANDERS+=(kylen)
-#ATK_COMMANDERS+=(typhon)
-#ATK_COMMANDERS+=(krellus)
+#ATK_COMMANDERS=(any_r{1..2})
+ATK_COMMANDERS+=(any_{im,rd,bt,xn,rt})
+#ATK_COMMANDERS+=(any_{coa,cnt})
 
+#ATK_COMMANDERS=(exc_{im,rd,xn,rt})
 
-
+[[ $TUO_LOGIN == engeji ]] && ATK_COMMANDERS=(any any_r{1..2})
+[[ $TUO_LOGIN == pryyf ]] && ATK_COMMANDERS=(dracorex ded nexor ark any)
 [[ $TUO_LOGIN == lugofira ]] && ATK_COMMANDERS=(ded nexor nexor any)
+[[ $TUO_LOGIN == ken ]] && ATK_COMMANDERS=(dracorex nexor ded ark any)
+[[ $TUO_LOGIN == tatyanav ]] && ATK_COMMANDERS=(silus nexor ark ded any ark_emrys)
+[[ $TUO_LOGIN == lexicus86 ]] && ATK_COMMANDERS=(silus dracorex nexor ded any)
+[[ $TUO_LOGIN == masteraceking ]] && ATK_COMMANDERS=(silus any)
 
 #DEF_COMMANDERS=(silus)
 
-ENEMY_DECK="arena_all"
-#ENEMY_DECK="Arena"
-ENEMY_ALIAS="${ENEMY_DECK,,}"
+ENEMY_DECK="/^StoredDecks\\.\\d+\\.(DireTide|TidalWave|MasterJedis|TrypticonDYN|UndyingDYN)\\./"
+#ENEMY_DECK="stored_decks_top"
+ENEMY_ALIAS="sd_top"
+#ENEMY_DECK="arena_best"
+#ENEMY_ALIAS="$ENEMY_DECK"
+#ENEMY_DEF_DECK="arena_comp;DecepticonDEF"
+#ENEMY_ATK_DECK="arena_comp;DecepticonATK"
+#ENEMY_DECK="arena_full"
+#ENEMY_DECK="/^(Arena|GW)\\..*\\.(ImmortalDYN|DireTide|TidalWave|WarEliteFTMFW)\\./"
+#ENEMY_DECK="/^(Arena|Brawl)\\..*\\.(ImmortalDYN|DireTide|TidalWave|WarEliteFTMFW|MasterJedis|UnbridledPhoenix|NewHope)\\.[^\\.]+$/"
+#ENEMY_ALIAS="arena_top_comp"
+#ENEMY_ALIAS="arena_dec"
+#ENEMY_ALIAS="${ENEMY_DECK,,}"
 
-#ENEMY_DECK="GW_GT_DEF"
-#ENEMY_ALIAS="gw_gt_def"
+#ENEMY_DEF_DECK="GW_GT_MYTH:0.75;GW_GT_HERO:1.25;GW_GT_NORM:1.0"
+#ENEMY_DEF_ALIAS="gw_gt_strong"
 
-#ENEMY_DEF_DECK="BRAWL_GT_MYTH:0.5;BRAWL_GT_HARD:1.25;BRAWL_GT_NORM:1.0"
+#ENEMY_DEF_DECK="GW_GT_HERO:1.5;GW_GT_NORM:1.0"
+#ENEMY_DEF_ALIAS="gw_gt_well"
+
+#ENEMY_DEF_DECK="BRAWL_GT_ALL"
+#ENEMY_DEF_ALIAS="brawl_gt_all"
+
+#ENEMY_DEF_DECK="BRAWL_GT_MYTH:0.75;BRAWL_GT_HERO:1.25;BRAWL_GT_NORM:1.0"
 #ENEMY_DEF_ALIAS="brawl_gt_medium"
 
 #ENEMY_DEF_DECK="BRAWL_GT_NORM:1.0;BRAWL_GT_EASY:1.5"
 #ENEMY_DEF_ALIAS="brawl_gt_easy"
 
-#ENEMY_DEF_DECK="BRAWL_GT_HARD:1.0;BRAWL_GT_NORM:1.5"
+#ENEMY_DEF_DECK="BRAWL_GT_HERO:1.0;BRAWL_GT_NORM:1.5"
 #ENEMY_DEF_ALIAS="brawl_gt_norm"
 
-#ENEMY_DEF_DECK="BRAWL_GT_MYTH:1.0;BRAWL_GT_HARD:1.5"
-#ENEMY_DEF_ALIAS="brawl_gt_hard"
+#ENEMY_DEF_DECK="BRAWL_GT_HERO:1.5;BRAWL_GT_NORM:1.0"
+#ENEMY_DEF_ALIAS="brawl_gt_well"
 
-#ENEMY_DEF_DECK="CQ_GT_HARD:0.5;CQ_GT_NORM:1.0"
+#ENEMY_DEF_DECK="BRAWL_GT_MYTH:1.0;BRAWL_GT_HERO:1.5"
+#ENEMY_DEF_ALIAS="brawl_gt_top"
+
+#ENEMY_DEF_DECK="ARENA_GT_MYTH:1.0;ARENA_GT_HERO:1.25;ARENA_GT_NORM:0.75"
+#ENEMY_DEF_ALIAS="arena_gt_top"
+
+#ENEMY_DEF_DECK="BRAWL_GT_MYTH"
+#ENEMY_DEF_ALIAS="brawl_gt_myth"
+
+#ENEMY_DEF_DECK="BRAWL_GT_HERO"
+#ENEMY_DEF_ALIAS="brawl_gt_hero"
+
+#ENEMY_DEF_DECK="CQ_GT_MYTH:0.5;CQ_GT_HERO:1.5;CQ_GT_NORM:1.0"
 #ENEMY_DEF_ALIAS="cq_gt_hard"
 
-# ----------------- BEG WR ---------------------
-
-#ENEMY_DEF_DECK="/^BRAWL_GT__WR_(50_54|55_59|60_64|65_69)$/"
-#ENEMY_DEF_ALIAS="brawl_gt_wr60_10"
-
-#ENEMY_DEF_DECK="/^BRAWL_GT__WR_(60_64|65_69|70_74|75_79)$/"
-#ENEMY_DEF_ALIAS="brawl_gt_wr70_10"
-
-#ENEMY_DEF_DECK="/^BRAWL_GT__WR_(75_79|80_84)$/"
-#ENEMY_DEF_ALIAS="brawl_gt_wr80_5"
-
-#ENEMY_DEF_DECK="/^BRAWL_GT__WR_(70_74|75_79|80_84|85_89|90_94)$/"
-#ENEMY_DEF_ALIAS="brawl_gt_wr80_10"
-
-#ENEMY_DEF_DECK="BRAWL_GT__WR_30_34:0.3;BRAWL_GT__WR_35_39:0.4;BRAWL_GT__WR_40_44:0.5;BRAWL_GT__WR_45_49:0.6;BRAWL_GT__WR_50_54:0.5;BRAWL_GT__WR_55_59:0.4"
-#ENEMY_DEF_ALIAS="brawl_gt_easy"
-
-ENEMY_DEF_DECK="BRAWL_GT__WR_40_44:0.3;BRAWL_GT__WR_45_49:0.4;BRAWL_GT__WR_50_54:0.5;BRAWL_GT__WR_55_59:0.6;BRAWL_GT__WR_60_64:0.5;BRAWL_GT__WR_65_69:0.4;BRAWL_GT__WR_70_74:0.3"
-ENEMY_DEF_ALIAS="brawl_gt_medium"
-
-ENEMY_DEF_DECK="BRAWL_GT__WR_60_64:0.3;BRAWL_GT__WR_65_69:0.4;BRAWL_GT__WR_70_74:0.5;BRAWL_GT__WR_75_79:0.6;BRAWL_GT__WR_80_84:0.5;BRAWL_GT__WR_85_89:0.4;BRAWL_GT__WR_90_99:0.3"
-ENEMY_DEF_ALIAS="brawl_gt_hard"
-
-# ----------------- END WR ---------------------
-
-#ENEMY_ATK_DECK="BRAWL_GT_ATK_ALL"
+#ENEMY_ATK_DECK="PREBRAWL_GT_ATK_ALL"
 #ENEMY_ATK_ALIAS="${ENEMY_ATK_DECK,,}"
 
-ENEMY_ATK_DECK="BRAWL_GT_ATK_MYTH:1.0;BRAWL_GT_ATK_HERO:1.25;BRAWL_GT_ATK_NORM:0.75"
-ENEMY_ATK_ALIAS="brawl_atk_strong"
+#ENEMY_ATK_DECK="BRAWL_GT_ATK_MYTH:1.0;BRAWL_GT_ATK_HERO:1.5"
+#ENEMY_ATK_ALIAS="brawl_atk_top"
+
+#ENEMY_ATK_DECK="BRAWL_GT_ATK_MYTH:1.0;BRAWL_GT_ATK_HERO:1.5;BRAWL_GT_ATK_NORM:1.25"
+#ENEMY_ATK_ALIAS="brawl_atk_strong"
+
+#ENEMY_ATK_DECK="GW_GT_ATK_MYTH:1.0;GW_GT_ATK_HERO:1.5;GW_GT_ATK_NORM:1.25"
+#ENEMY_ATK_ALIAS="gw_atk_strong"
+
+#ENEMY_ATK_DECK="ARENA_GT_ATK_MYTH:1.0;ARENA_GT_ATK_HERO:1.5;ARENA_GT_ATK_NORM:1.25"
+#ENEMY_ATK_DECK="ARENA_GT_ATK_MYTH:1.0;ARENA_GT_ATK_HERO:1.5"
+#ENEMY_ATK_ALIAS="arena_atk_strong"
 
 #ENEMY_ATK_DECK="CQ_GT_ATK_ALL"
 #ENEMY_ATK_ALIAS="${ENEMY_ATK_DECK,,}"
 
-#BGE="_FLX"
-unset BGE
-
-#ENEMY_DECK="BRAWL_GT${BGE}_ALL"
-#ENEMY_ALIAS="brawl_gt_all"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_ATK_ALL"
-#ENEMY_ALIAS="brawl_gt_atk"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_FANT"
-#ENEMY_ALIAS="brawl_gt_fant"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_FANT:2;BRAWL_GT${BGE}_MYTH:5;BRAWL_GT${BGE}_HERO:3"
-#ENEMY_ALIAS="brawl_gt_crazy"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_FANT:1;BRAWL_GT${BGE}_MYTH:2;BRAWL_GT${BGE}_HERO:3;BRAWL_GT${BGE}_NORM:2"
-#ENEMY_ALIAS="brawl_gt_strong"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_MYTH:1;BRAWL_GT${BGE}_HERO:2;BRAWL_GT${BGE}_NORM:3;BRAWL_GT${BGE}_EASY:2"
-#ENEMY_ALIAS="brawl_gt_normal"
-
-#ENEMY_DECK="BRAWL_GT${BGE}_HERO:1;BRAWL_GT${BGE}_NORM:2;BRAWL_GT${BGE}_EASY:3"
-#ENEMY_ALIAS="brawl_gt_easy"
+#ENEMY_ATK_DECK="GW_GT_ATK_HARD;GW_GT_ATK_NORM"
+#ENEMY_ATK_ALIAS="gw_gt_atk_strong"
 
 
 COMMON_OPTIONS=(
     ddd_b64
     _${TUO_LOGIN:-dsuchka}
     _${TUO_LOGIN:-dsuchka}_bb
-    #_gw_gt.FA_x_SF_SF
-    #_gw_gt_atk.SF_SF_x_FA
-    #_mj2
+    _discand_legacy_pve_rewards
+    _discand_legacy_pvp_rewards
+    _discand_mutant_rewards
+    _discand_outdated_p2w
+    #_gw_gt
+    #_gw_gt_atk
     _brawl_gt
     _brawl_gt_atk
-    #_cq_gt2
+    #_arena_gt
+    #_arena_gt_atk
+    #_box_dedication
+    #_cq_gt
     #_cq_gt_atk
-    #_arena
+    #_arena_best
+    #_sd_top
+    _sd
+    #_dec
+    #_udyn
+
+    -e "IronWill"
+
+    #dom-none
+    dom-owned
+    #dom-maxed
+    #ydom "Constantine's Nexus"
+    #ydom "Alpha Shielding"
+
     endgame 2
-    -t 4
-    climb-opts:iter-mul=6
-    #dom-
-    -e "Megamorphosis"
+    climb-opts:endgame-commander=2
+    -t $THREADS
+    climb-opts:iter-mul=${ITER_MUL:-6}
+    +uc
+    +vc
+    #mis 0.003
 )
 
 #
@@ -145,7 +166,7 @@ ARENA_ATTACK_OPTIONS=(
 )
 
 ARENA_DEFENSE_OPTIONS=(
-    enemy:ordered
+    #enemy:ordered
 )
 
 
@@ -158,10 +179,15 @@ BRAWL_COMMON_OPTIONS=(
 
 BRAWL_ATTACK_OPTIONS=(
     #-L 7 10
+    #yf "CS, DF"
+    #ef "IB #2"
 )
 
 BRAWL_DEFENSE_OPTIONS=(
-    enemy:ordered
+    #enemy:ordered
+    #enemy:exact-ordered
+    #yf "IB #2"
+    #ef "CS, DF"
 )
 
 
@@ -230,13 +256,20 @@ run_command() {
     "${command[@]}" &>> "$log" &
 }
 
+TODO_MODE_ATK=(climbex "${ATTACK_ITERS[@]}")
+TODO_MODE_DEF=(climbex "${DEFENSE_ITERS[@]}")
+if ((DO_ANNEAL)); then
+    TODO_MODE_ATK=(anneal "${ATTACK_ITERS[1]}" "1000" "0.001")
+    TODO_MODE_DEF=(anneal "${DEFENSE_ITERS[1]}" "1000" "0.001")
+fi
+
 ## brawl
 if ((RUN_BRAWL)); then
     if ((RUN_ATTACK)); then
         ((RANDOM_ATTACK)) && order="random" || order="ordered"
         OPTIONS=(
             "${COMMON_OPTIONS[@]}" "${BRAWL_COMMON_OPTIONS[@]}" "${BRAWL_ATTACK_OPTIONS[@]}"
-            "$order" brawl climbex "${ATTACK_ITERS[@]}"
+            "$order" brawl "${TODO_MODE_ATK[@]}"
         )
         for commander in "${ATK_COMMANDERS[@]}"; do
             check_commander "$commander" || continue
@@ -249,7 +282,7 @@ if ((RUN_BRAWL)); then
     if ((RUN_DEFENSE)); then
         OPTIONS=(
             "${COMMON_OPTIONS[@]}" "${BRAWL_COMMON_OPTIONS[@]}" "${BRAWL_DEFENSE_OPTIONS[@]}"
-            random brawl-defense climbex "${DEFENSE_ITERS[@]}"
+            random brawl-defense "${TODO_MODE_DEF[@]}"
         )
         for commander in "${DEF_COMMANDERS[@]}"; do
             check_commander "$commander" || continue
@@ -267,7 +300,7 @@ if ((RUN_ARENA)); then
         ((RANDOM_ATTACK)) && order="random" || order="ordered"
         OPTIONS=(
             "${COMMON_OPTIONS[@]}" "${ARENA_COMMON_OPTIONS[@]}" "${ARENA_ATTACK_OPTIONS[@]}"
-            "$order" fight win climbex "${ATTACK_ITERS[@]}"
+            "$order" fight win "${TODO_MODE_ATK[@]}"
         )
         for commander in "${ATK_COMMANDERS[@]}"; do
             check_commander "$commander" || continue
@@ -280,7 +313,7 @@ if ((RUN_ARENA)); then
     if ((RUN_DEFENSE)); then
         OPTIONS=(
             "${COMMON_OPTIONS[@]}" "${ARENA_COMMON_OPTIONS[@]}" "${ARENA_DEFENSE_OPTIONS[@]}"
-            random surge defense climbex "${DEFENSE_ITERS[@]}"
+            random surge defense "${TODO_MODE_DEF[@]}"
         )
         for commander in "${DEF_COMMANDERS[@]}"; do
             check_commander "$commander" || continue

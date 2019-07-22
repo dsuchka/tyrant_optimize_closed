@@ -179,6 +179,7 @@ command=(
         ${endgame:+endgame "$endgame"} \
         -L $min_deck_size $max_deck_size \
         "${flags[@]}" "${opts[@]}" \
+        +uc +vc \
         "$todo" "$iters" ${eiters:+"$eiters"}
 )
 

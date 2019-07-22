@@ -14,7 +14,7 @@ random=""
 eiters=""
 fund=""
 endgame=""
-threads=8
+threads=2
 min_deck_size=3
 max_deck_size=10
 

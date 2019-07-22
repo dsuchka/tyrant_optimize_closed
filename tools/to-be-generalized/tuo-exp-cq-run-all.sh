@@ -1,37 +1,44 @@
 #!/bin/bash
 
-declare -i PRECQ=1
+declare -i PRECQ=0
 
-yforts=""
-eforts=""
 mode=${1:-both}
 
-#yforts="Phobos Station-2, Andar Quarantine-2, Borean Forges-2, The Spire-2, Jotun's Pantheon-2, SkyCom Complex-2"
-#eforts=$yforts
+yforts=""
+#yforts="Borean Forges-3, Jotun's Pantheon-2, Andar Quarantine-2, SkyCom Complex-2, Norhaven-2"
+#yforts="Elder Port-3, Norhaven-3, Andar Quarantine-2, Jotun's Pantheon-2, The Spire-2, Phobos Station-2"
+yforts="Elder Port-3, Andar Quarantine-2, Jotun's Pantheon-2, The Spire-2, Phobos Station-2"
+eforts=$yforts
+
+yforts="Ashrock Redoubt-2, Borean Forges-2, The Spire-2, Jotun's Pantheon-2, Infested Depot-2"
+
+(( PRECQ )) && yforts="" && eforts=""
 
 attack_effects=(
-    #-e "Asphodel Nexus"
-    #-e "Phobos Station"
-    -e "Andar Quarantine"
+    -e "Asphodel Nexus"
+    -e "Phobos Station"
 
     #-e "The Spire"
+    #-e "Borean Forges"
     #-e "Ashrock Redoubt"
     #-e "Baron's Claw Labs"
-    #-e "SkyCom Complex"
-    #-e "Jotun's Pantheon"
+    -e "Jotun's Pantheon"
 
-    #-e "Colonial Relay"
-    #-e "Mech Graveyard"
-    #-e "Infested Depot"
     #-e "Seismic Beacon"
-    #-e "Tyrolian Outpost"
+    #-e "Cleave Rock"
+    #-e "Infested Depot"
     #-e "Elder Port"
-    #-e "Malort's Den"
 
     #-e "Red Maw Base"
     #-e "Brood Nest"
-    #-e "Borean Forges"
     #-e "Magma Foundry"
+    #-e "SkyCom Complex"
+    #-e "Andar Quarantine"
+
+    #-e "Tyrolian Outpost"
+    #-e "Malort's Den"
+    #-e "Colonial Relay"
+    #-e "Mech Graveyard"
 )
 
 defense_effects=(
@@ -44,7 +51,6 @@ flags=(
     -f ddd_b64
     -f _${TUO_LOGIN:-dsuchka}
     -f _${TUO_LOGIN:-dsuchka}_bb
-    #-f _box_alliance
     -f _discand_legacy_pve_rewards
     -f _discand_legacy_pvp_rewards
     -f _discand_mutant_rewards
@@ -52,10 +58,11 @@ flags=(
     -f _${PRE_FLAG,,}cq_gt_atk
     -f _${PRE_FLAG,,}cq_gt
     -f "climb-opts:iter-mul=6"
+    -f "climb-opts:egc=2"
     #-f dom-maxed
     -f dom-owned
     -G 2 #1
-    -F 5500
+    -F 18550
     -f +uc
     -f +vc
 )
@@ -67,7 +74,7 @@ attack=(
 )
 
 defense=(
-    -t 4
+    -t 5
     -i 33${TUO_DECK:+00}
     -I 500
     -d
@@ -78,9 +85,10 @@ declare -A attack_enemies defense_enemies
 
 # enemy def-decks for 'attack' simming
 attack_enemies=(
-    #[cq_top]="${PRE_FLAG}CQ_GT_MYTH:0.75;${PRE_FLAG}CQ_GT_HERO:1.75;${PRE_FLAG}CQ_GT_NORM:1.5"
+    #[cq_top]="${PRE_FLAG}CQ_GT_MYTH:0.75;${PRE_FLAG}CQ_GT_HERO:1.5;${PRE_FLAG}CQ_GT_NORM:1.25"
     #[cq_myth]="${PRE_FLAG}CQ_GT_MYTH"
     #[cq_hero]="${PRE_FLAG}CQ_GT_HERO"
+    #[cq_norm]="${PRE_FLAG}CQ_GT_NORM"
     [cq_med]="${PRE_FLAG}CQ_GT_HERO;${PRE_FLAG}CQ_GT_NORM"
     #[cq_low]="${PRE_FLAG}CQ_GT_NORM;${PRE_FLAG}CQ_GT_EASY"
     #[cq_top]="${PRE_FLAG}CQ_GT_HARD:0.5;${PRE_FLAG}CQ_GT_NORM:0.75"
@@ -99,8 +107,9 @@ defense_enemies=(
 case "$TUO_LOGIN" in
     (dsuchka|"")
         attack_commanders=(
-            any
-            any_{im,rd,bt,xn,rt}
+            #any
+            #any_{im,rd,bt,xn,rt}
+            any_r{1..4}
         )
         ;;
 
@@ -113,11 +122,21 @@ case "$TUO_LOGIN" in
 
     (lugofira)
         attack_commanders=(
+            vex5
             ded
             nexor
         )
         ;;
 
+    (pryyf)
+        attack_commanders=(
+            dracorex
+            krellus
+            nexor
+            ded
+            any
+        )
+        ;;
 esac
 
 ### BEGIN OF INITIAL DECKS ###
