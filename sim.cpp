@@ -3390,7 +3390,7 @@ Results<uint64_t> play(Field* fd,bool skip_init)
         // Phase: (Later-) Enhance, Inhibit, Sabotage, Disease
         //-------------------------------------------------
         //Perform Inhibit, Sabotage, Disease
-        auto& assaults(fd->tap->structures);
+        auto& assaults(fd->tap->assaults);
         for(unsigned index(0); index < assaults.size(); ++index)
         {
             CardStatus * att_status = &assaults[index];
