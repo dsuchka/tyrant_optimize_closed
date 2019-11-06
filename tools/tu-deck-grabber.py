@@ -27,6 +27,8 @@ XML_DIR = "~/3pp/tyrant_optimize/data/"
 DEFAULT_USER_DB_PATH = "~/.tu-deck-grabber.udb"
 DEFAULT_CONFIG_PATH = "~/.tu-deck-grabber.ini"
 
+TUC_VERSION = 'tuc v1'
+
 #PROTOCOL = "http"
 #API_HOST = "localhost:8000"
 PROTOCOL = "https"
@@ -168,7 +170,35 @@ if os.path.exists(udb_fname):
         user_db = pickle.load(f)
         print("INFO: user-db(total {} entries) loaded from dump: {}".format(user_db.size(), udb_fname))
 
-id_to_card_name = {}
+id_to_cards = {}
+
+faction_id_to_name_scname_tuple = {
+    1: ('Imperial', 'im'),
+    2: ('Raider', 'rd'),
+    3: ('Bloodthirsty', 'bt'),
+    4: ('Xeno', 'xn'),
+    5: ('Righteous', 'rt'),
+    6: ('Progenitor', 'pg'),
+}
+
+def getFactionName(factionId):
+    return faction_id_to_name_scname_tuple[factionId][0]
+
+def getFactionShortcutName(factionId):
+    return faction_id_to_name_scname_tuple[factionId][1]
+
+def parseUnitSkills(root):
+    skills = []
+    for skill_node in getAllChildElementNodes(root, 'skill'):
+        skill = {}
+        for x in ('id', 'x', 'y', 'all', 'trigger', 'n', 'c', 'card_id'):
+            v = skill_node.getAttributeNode(x)
+            if v:
+                skill[x] = v.value
+        if 'id' not in skill:
+            raise Exception('skill without id: {}'.format(skill))
+        skills.append(skill)
+    return skills
 
 for i in range(1, 100):
     xml_fname = os.path.join(os.path.expanduser(XML_DIR), 'cards_section_{}.xml'.format(i))
@@ -181,44 +211,80 @@ for i in range(1, 100):
     dump_fname = re.sub('\.xml$', '.pck', xml_fname)
     if os.path.exists(dump_fname):
         with open(dump_fname, 'rb') as f:
-            xhash = pickle.load(f)
-            xmap = pickle.load(f)
-            if xhash == xml_file_hash:
-                id_to_card_name.update(xmap)
-                print("INFO: image of {} loaded from dump: {}".format(xml_fname, dump_fname))
-                continue
-            print("INFO: reloading {}: dumped hash(0x{:08x}) <> actual hash(0x{:08x})".format(xml_fname, xhash, xml_file_hash))
+            xmagic = pickle.load(f)
+            if xmagic != TUC_VERSION:
+                print("INFO: reloading {}: old format".format(xml_fname))
+            else:
+                xhash = pickle.load(f)
+                xmap = pickle.load(f)
+                if xhash == xml_file_hash:
+                    id_to_cards.update(xmap)
+                    print("INFO: image of {} loaded from dump: {}".format(xml_fname, dump_fname))
+                    continue
+                print("INFO: reloading {}: dumped hash(0x{:08x}) <> actual hash(0x{:08x})".format(xml_fname, xhash, xml_file_hash))
 
     file_cards_by_id = {}
     xml = minidom.parse(xml_fname)
     root = getFirstChildElementNode(xml, 'root')
     for unit in getAllChildElementNodes(root, 'unit'):
-        card_id = int(getFirstChildTextNodeValue(getFirstChildElementNode(unit, 'id')))
-        card_name = getFirstChildTextNodeValue(getFirstChildElementNode(unit, 'name'))
-        if card_name is None:
-            print("Warning: file {}: found an unit(id={}) without name".format(xml_fname, card_id))
+        def unit_get(name, castType=None, defValue=None, unit=unit):
+            v = getFirstChildTextNodeValue(getFirstChildElementNode(unit, name))
+            return defValue if not v else castType(v) if castType else v
+        card = {}
+        card['id'] = unit_get('id', int)
+        card['name'] = unit_get('name')
+        card['set'] = unit_get('set', int) or 0
+        card['fusion'] = unit_get('fusion_level', int) or 0
+        card['attack'] = unit_get('attack', int) or 0
+        card['hp'] = unit_get('health', int) or 0
+        card['delay'] = unit_get('cost', int) or 0
+        card['rarity'] = unit_get('rarity', int) or 1
+        card['faction'] = unit_get('type', int) or 1
+        card['level'] = unit_get('level', int) or 1
+
+        if card['id'] is None:
+            print("Warning: file {}: found an unit(name={}) without id".format(xml_fname, card['name']))
             continue
-        level_raw = getFirstChildTextNodeValue(getFirstChildElementNode(unit, 'level'))
-        level = level_raw and int(level_raw) or 1
-        top_level_id = card_id
-        file_cards_by_id[card_id] = "{}-{}".format(card_name, level)
+
+        if card['name'] is None:
+            print("Warning: file {}: found an unit(id={}) without name".format(xml_fname, card['id']))
+            continue
+
+        level_raw = unit_get('level')
+        card['full_name'] = "{}-{}".format(card['name'], card['level'])
+        card['maxed'] = False
+        top_level_id = card['id']
+        file_cards_by_id[top_level_id] = card
+
+        card['skills'] = parseUnitSkills(unit)
+
+        card_prev = card
         for upgrade in getAllChildElementNodes(unit, 'upgrade'):
-            card_id = int(getFirstChildTextNodeValue(getFirstChildElementNode(upgrade, 'card_id')))
-            level = int(getFirstChildTextNodeValue(getFirstChildElementNode(upgrade, 'level')))
-            top_level_id = card_id
-            file_cards_by_id[card_id] = "{}-{}".format(card_name, level)
-        file_cards_by_id[top_level_id] = card_name
+            def upgrade_get(name, castType=None, defValue=None):
+                return unit_get(name, castType=castType, unit=upgrade, defValue=defValue)
+            card_next = {}
+            card_next.update(card_prev)
+            card_next['id'] = upgrade_get('card_id', int)
+            card_next['level'] = upgrade_get('level', int)
+            card_next['hp'] = upgrade_get('health', int) or card_prev['hp']
+            card_next['attack'] = upgrade_get('attack', int) or card_prev['attack']
+            card_next['delay'] = upgrade_get('cost', int) or card_prev['delay']
+            card_next['full_name'] =  "{}-{}".format(card_next['name'], card_next['level'])
+            card_next['skills'] = parseUnitSkills(upgrade) or  card_prev['skills']
+            top_level_id = card_next['id']
+            file_cards_by_id[top_level_id] = card_next
+            card_prev = card_next
+
+        file_cards_by_id[top_level_id]['full_name'] = card['name']
+        file_cards_by_id[top_level_id]['maxed'] = True
 
     # dump file image
     with open(dump_fname, 'wb') as f:
+        pickle.dump(TUC_VERSION, f)
         pickle.dump(xml_file_hash, f)
         pickle.dump(file_cards_by_id, f)
         print("INFO: {} parsed & image saved to dump: {}".format(xml_fname, dump_fname))
-    id_to_card_name.update(file_cards_by_id)
-
-#for id, name in id_to_card_name.items():
-#    print("{}: {}".format(id, name))
-
+    id_to_cards.update(file_cards_by_id)
 
 
 def mkUrlParams(kvmap):
@@ -326,8 +392,8 @@ def doSalvageCard(http, cid):
     return json.loads(data)
 
 def getCardNameById(card_id):
-    if card_id in id_to_card_name:
-        return id_to_card_name[card_id]
+    if card_id in id_to_cards:
+        return id_to_cards[card_id]['full_name']
     return '[{}]'.format(card_id)
 
 def doHuntAndEnrichUserDb(http):
@@ -508,4 +574,16 @@ with PoolManager(1,
                 sp = rsp['user_data']['salvage']
             print("SP: {}".format(sp))
             continue
-        print("ERROR: unknown command: {} (supported: [ grab | hunt | exit ])".format(line))
+        if args[0] == 'dump':
+            if len(args) < 2:
+                print("USAGE: dump /path/to/output/tuc.json")
+                continue
+            out_fname = args[1]
+            try:
+                with open(out_fname, 'wt') as f:
+                    json.dump(id_to_cards, f, indent=2)
+                print("done")
+            except Exception as e:
+                print("could not save: {}".format(e))
+            continue
+        print("ERROR: unknown command: {} (supported: [ grab | hunt | dump | exit ])".format(line))
