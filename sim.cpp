@@ -437,13 +437,24 @@ SkillSpec apply_sabotage(const SkillSpec& s, unsigned sabotaged_value)
 }
 
 //------------------------------------------------------------------------------
-inline void resolve_scavenge(Storage<CardStatus>& store)
+inline void resolve_scavenge(Field* fd, Storage<CardStatus>& store, CardStatus* dead)
 {
     for(auto status : store.m_indirect)
     {
         if(!is_alive(status))continue;
         unsigned scavenge_value = status->skill(Skill::scavenge);
         if(!scavenge_value)continue;
+
+        // bug with Scavenge at first time when card is played
+        // and when died unit is a structure killed by a BGE (not sure)
+        if ((status->m_turn_played == fd->turn)
+            && (dead->m_card->m_type == CardType::structure)
+            && (fd->current_phase == Field::bge_skills_phase))
+        {
+            _DEBUG_MSG(1, "%s does not activate Scavenge (%u) due to a bug implementation\n",
+                status_description(status).c_str(), scavenge_value);
+            continue;
+        }
 
         _DEBUG_MSG(1, "%s activates Scavenge %u\n",
                 status_description(status).c_str(), scavenge_value);
@@ -463,10 +474,10 @@ void prepend_on_death(Field* fd)
     {
         // Skill: Scavenge
         // Any unit dies => perm-hp-buff
-        resolve_scavenge(fd->players[0]->assaults);
-        resolve_scavenge(fd->players[1]->assaults);
-        resolve_scavenge(fd->players[0]->structures);
-        resolve_scavenge(fd->players[1]->structures);
+        resolve_scavenge(fd, fd->players[0]->assaults, status);
+        resolve_scavenge(fd, fd->players[1]->assaults, status);
+        resolve_scavenge(fd, fd->players[0]->structures, status);
+        resolve_scavenge(fd, fd->players[1]->structures, status);
 
         if (status->m_card->m_type == CardType::assault)
         {
@@ -950,6 +961,7 @@ struct PlayCard
             status = &storage->add_back();
             status->set(card);
             status->m_index = storage->size() - 1;
+            status->m_turn_played = fd->turn;
             status->m_player = actor_index;
 #ifndef NQUEST
             if (actor_index == 0)
@@ -3433,6 +3445,7 @@ Results<uint64_t> play(Field* fd,bool skip_init)
         }
 
         // Evaluate activation BGE skills
+        fd->current_phase = Field::bge_skills_phase;
         for (const auto & bg_skill: fd->bg_skills[fd->tapi])
         {
             fd->prepare_action();

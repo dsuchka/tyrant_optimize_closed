@@ -178,6 +178,7 @@ struct CardStatus
     const Card* m_card;
     unsigned m_index;
     unsigned m_action_index;
+    unsigned m_turn_played;
     unsigned m_player;
     unsigned m_delay;
     unsigned m_hp;
@@ -317,6 +318,7 @@ public:
     enum phase
     {
         playcard_phase,
+        bge_skills_phase,
         commander_phase,
         structures_phase,
         assaults_phase,
