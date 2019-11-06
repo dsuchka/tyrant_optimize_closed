@@ -451,7 +451,7 @@ inline void resolve_scavenge(Storage<CardStatus>& store)
     }
 }
 //------------------------------------------------------------------------------
-void prepend_on_death(Field* fd)
+void prepend_on_death(Field* fd, bool perform_on_death)
 {
     if (fd->killed_units.empty())
         return;
@@ -557,6 +557,8 @@ void prepend_on_death(Field* fd)
             fd->skill_queue.emplace(fd->skill_queue.begin()+1, commander, ss_rally); // +1: keep ss_heal at first place
         }
 
+        if (!perform_on_death) { continue; }
+
         // resolve On-Death skills
         for (const auto& ss: status->m_card->m_skills_on_death)
         {
@@ -566,6 +568,11 @@ void prepend_on_death(Field* fd)
         }
     }
     fd->killed_units.clear();
+}
+
+inline void prepend_on_death(Field* fd)
+{
+    prepend_on_death(fd, true);
 }
 
 //------------------------------------------------------------------------------
@@ -3096,7 +3103,7 @@ void perform_targetted_hostile_fast(Field* fd, CardStatus* src, const SkillSpec&
         }
     }
 
-    prepend_on_death(fd);  // paybacked skills
+    prepend_on_death(fd, false);  // paybacked skills
 }
 
 //------------------------------------------------------------------------------
