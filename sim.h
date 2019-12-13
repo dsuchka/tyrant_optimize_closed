@@ -295,6 +295,8 @@ public:
     std::array<Hand*, 2> players;
     unsigned tapi; // current turn's active player index
     unsigned tipi; // and inactive
+    // forced active player index for harmfull skills targeting (Revenge bug impl)
+    signed forced_player_for_act_harmful_skill = -1;
     Hand* tap;
     Hand* tip;
     std::vector<CardStatus*> selection_array;

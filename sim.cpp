@@ -2475,7 +2475,12 @@ inline unsigned select_fast<Skill::fortify>(Field* fd, CardStatus* src, const st
 }
 inline std::vector<CardStatus*>& skill_targets_hostile_assault(Field* fd, CardStatus* src)
 {
-    return(fd->players[opponent(src->m_player)]->assaults.m_indirect);
+    auto target_player = opponent(
+        (fd->forced_player_for_act_harmful_skill >= 0)
+            ? (unsigned) fd->forced_player_for_act_harmful_skill
+            : src->m_player
+    );
+    return(fd->players[target_player]->assaults.m_indirect);
 }
 
 inline std::vector<CardStatus*>& skill_targets_allied_assault(Field* fd, CardStatus* src)
@@ -2485,7 +2490,12 @@ inline std::vector<CardStatus*>& skill_targets_allied_assault(Field* fd, CardSta
 
 inline std::vector<CardStatus*>& skill_targets_hostile_structure(Field* fd, CardStatus* src)
 {
-    return(fd->players[opponent(src->m_player)]->structures.m_indirect);
+    auto target_player = opponent(
+        (fd->forced_player_for_act_harmful_skill >= 0)
+            ? (unsigned) fd->forced_player_for_act_harmful_skill
+            : src->m_player
+    );
+    return(fd->players[target_player]->structures.m_indirect);
 }
 
 inline std::vector<CardStatus*>& skill_targets_allied_structure(Field* fd, CardStatus* src)
@@ -2958,6 +2968,17 @@ void perform_targetted_hostile_fast(Field* fd, CardStatus* src, const SkillSpec&
 
     prepend_on_death(fd);  // skills
 
+    // exit when no paybackers
+    if (!paybackers.size()) { return; };
+
+    // enforce targeting of activation harmful skills
+    bool forced_player_is_set = false;
+    if (fd->forced_player_for_act_harmful_skill < 0) {
+        fd->forced_player_for_act_harmful_skill = (signed) opponent(src->m_player);
+        forced_player_is_set = true;
+        _DEBUG_MSG(2, "!> (Revenge): player for activation harmful skills forced to be %i\n", fd->forced_player_for_act_harmful_skill);
+    }
+
     // Payback/Revenge
     for (CardStatus * pb_status: paybackers)
     {
@@ -3097,6 +3118,13 @@ void perform_targetted_hostile_fast(Field* fd, CardStatus* src, const SkillSpec&
     }
 
     prepend_on_death(fd);  // paybacked skills
+    resolve_skill(fd); // resolve paybacked skills
+
+    // restore normal targeting
+    if (forced_player_is_set) {
+        _DEBUG_MSG(2, "!< (Revenge): lock on player for activation harmful skill is released\n");
+        fd->forced_player_for_act_harmful_skill = -1;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -3259,6 +3287,7 @@ Results<uint64_t> play(Field* fd,bool skip_init)
         fd->players[1]->commander.m_player = 1;
         fd->tapi = fd->gamemode == surge ? 1 : 0;
         fd->tipi = opponent(fd->tapi);
+        fd->forced_player_for_act_harmful_skill = -1;
         fd->tap = fd->players[fd->tapi];
         fd->tip = fd->players[fd->tipi];
         fd->end = false;
