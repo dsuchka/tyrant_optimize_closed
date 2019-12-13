@@ -41,6 +41,7 @@ Noxious Arena: Enfeeble all 2
 Bathe in Blood: Bloodlust 2
 Fervorous Revenge: Revenge 3
 Camaraderie: Enhance All Coalition 3
+Amongst the Ruins: Siege All 999
 
 // Conquest Zones
 // --

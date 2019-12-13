@@ -922,7 +922,29 @@
             </card_pool>
         </deck>
     </raid>
+	<raid>
+		<id>81</id>
+		<name>Petrisis Fleshcrafter Raid</name>
+		<levels>26</levels>
+		<commander>26250</commander><!-- Petrisis Fleshcrafter -->
+		<fortress_card id="18974"/> <!--Facebloom-->
+		<fortress_card id="18984"/> <!--Life Reservoir-->
+		<deck>
+		<card_pool amount="10">
+			<!-- Vinds -->
+			<card replicates="2">64654</card><!--Fleshcrafter's Butcher-->
+			<card replicates="2">64664</card><!--Petrisis' Crackshot-->
+			<card replicates="2">64674</card><!--Fleshcrafter's Husk-->
+			<card replicates="2">64684</card><!--Petrisis' Grafter-->
+			<!-- <card replicates="2">64694</card><!--Petrisis' Scion--> 
 
+			<!-- Mythics -->   
+			<card replicates="1">64704</card><!--Perfected Elemir-->
+			<card replicates="1">64714</card><!--Perfected Tarantalus-->
+			<card replicates="1">64724</card><!--Perfected Salg-->
+		</card_pool>
+		</deck>
+	</raid>
   <!-- END of Raids -->
   <!-- Campaigns -->
   <campaign>
