@@ -314,6 +314,7 @@ public:
     std::vector<CardStatus*> killed_units;
     std::map<CardStatus*, unsigned> damaged_units_to_times;
 
+
     enum phase
     {
         playcard_phase,
@@ -335,6 +336,8 @@ public:
     unsigned quest_counter;
 #endif
 
+    bool (&fixes)[Fix::num_fixes];// ;
+
     Field(std::mt19937& re_, const Cards& cards_, Hand& hand1, Hand& hand2, gamemode_t gamemode_, OptimizationMode optimization_mode_,
 #ifndef NQUEST
             const Quest & quest_,
@@ -342,15 +345,15 @@ public:
             std::array<signed short, PassiveBGE::num_passive_bges>& your_bg_effects_,
             std::array<signed short, PassiveBGE::num_passive_bges>& enemy_bg_effects_,
             std::vector<SkillSpec>& your_bg_skills_,
-            std::vector<SkillSpec>& enemy_bg_skills_,
-	    unsigned flexible_iter_=20,unsigned flexible_turn_=10) :
+            std::vector<SkillSpec>& enemy_bg_skills_,bool (&fixes_)[Fix::num_fixes],
+			unsigned flexible_iter_=20,unsigned flexible_turn_=10) :
         end{false},
         re(re_),
         cards(cards_),
         players{{&hand1, &hand2}},
         turn(1),
-	      flexible_iter(flexible_iter_),
-	      flexible_turn(flexible_turn_),
+	    flexible_iter(flexible_iter_),
+	    flexible_turn(flexible_turn_),
         gamemode(gamemode_),
         optimization_mode(optimization_mode_),
 #ifndef NQUEST
@@ -359,10 +362,11 @@ public:
         bg_effects{your_bg_effects_, enemy_bg_effects_},
         bg_skills{your_bg_skills_, enemy_bg_skills_},
         assault_bloodlusted(false),
-        bloodlust_value(0)
+        bloodlust_value(0),
 #ifndef NQUEST
-        , quest_counter(0)
+        quest_counter(0),
 #endif
+		fixes(fixes_)
     {
     }
 

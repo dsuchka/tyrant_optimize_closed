@@ -14,6 +14,10 @@
 #include <boost/algorithm/string.hpp>
 
 
+enum Fix
+{
+	no_fix, enhance_early, revenge_on_death, num_fixes
+};
 
 class Card;
 
@@ -95,6 +99,7 @@ enum PassiveBGE
 };
 }
 extern const std::string passive_bge_names[PassiveBGE::num_passive_bges];
+
 
 inline bool is_activation_harmful_skill(Skill::Skill skill_id)
 {

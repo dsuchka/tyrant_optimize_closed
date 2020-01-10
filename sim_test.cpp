@@ -25,7 +25,10 @@ typedef std::tuple<FinalResults<long double>,std::string,double> Result; // scor
 int iter = 10;
 unsigned seed = 0;
 //limit for float diffing
-double eps = 0.0000001;
+//disable
+double eps = 1;
+//enable
+//double eps = 0.0000001;
 
 //pipe output: https://stackoverflow.com/questions/5405016/can-i-check-my-programs-output-with-boost-test
 struct ios_redirect {

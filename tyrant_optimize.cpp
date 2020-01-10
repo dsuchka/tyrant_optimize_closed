@@ -207,6 +207,13 @@ void init()
 	invert_skills=false;
 	prefered_skills.clear();
 	prefered_factor=3;
+
+	//fix defaults
+	for (int i=0; i < Fix::num_fixes;++i) fixes[i]=false;
+	//recommended/default fixes
+	fixes[Fix::enhance_early] = true;
+	fixes[Fix::revenge_on_death] = true;
+
 }
 
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -660,7 +667,7 @@ FinalResults<long double> compute_score(const EvaluatedResults& results, std::ve
 #ifndef NQUEST
 						quest,
 #endif
-						your_bg_effects, enemy_bg_effects, your_bg_skills, enemy_bg_skills, flexible_iter,flexible_turn);
+						your_bg_effects, enemy_bg_effects, your_bg_skills, enemy_bg_skills,fixes, flexible_iter,flexible_turn);
 				Results<uint64_t> result(play(&fd));
 				if (__builtin_expect(mode_open_the_deck, false))
 				{
@@ -2075,6 +2082,18 @@ FinalResults<long double> run(int argc, char** argv)
 		else if (strcmp(argv[argIndex], "+hm") == 0)
 		{
 			use_harmonic_mean = true;
+		}
+		else if (strcmp(argv[argIndex], "no-fix") == 0)
+		{
+			for (int i=0; i < Fix::num_fixes;++i) fixes[i]=false;
+		}
+		else if (strcmp(argv[argIndex], "fix-enhance-early") == 0)
+		{
+			fixes[Fix::enhance_early] = true;
+		}
+		else if (strcmp(argv[argIndex], "fix-revenge-on-death") == 0)
+		{
+			fixes[Fix::revenge_on_death] = true;
 		}
 		else if (strcmp(argv[argIndex], "seed") == 0)
 		{

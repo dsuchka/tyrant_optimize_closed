@@ -90,6 +90,9 @@ namespace tuo {
 	EXTERN std::vector<Skill::Skill> prefered_skills;
 	EXTERN unsigned prefered_factor;
 
+	//fixes
+	EXTERN bool fixes[Fix::num_fixes];
+
 #if defined(ANDROID) || defined(__ANDROID__)
 	EXTERN JNIEnv *envv;
 	EXTERN jobject objv;
