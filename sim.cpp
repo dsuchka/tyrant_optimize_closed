@@ -1073,7 +1073,7 @@ inline bool skill_check<Skill::drain>(Field* fd, CardStatus* c, CardStatus* ref)
     template<>
 inline bool skill_check<Skill::mark>(Field* fd, CardStatus* c, CardStatus* ref)
 {
-    return (ref->m_card->m_type == CardType::assault) && is_alive(c) && is_alive(ref);
+    return (ref->m_card->m_type == CardType::assault);
 }
 
     template<>
@@ -1478,37 +1478,17 @@ struct PerformAttack
             }
 
             modify_attack_damage<def_cardtype>(pre_modifier_dmg);
-            if (!att_dmg)
-            {
-                on_attacked<def_cardtype>();
-            }
-            else
-            {
-                // evals attack damage dealt to def card
-                attack_damage<def_cardtype>();
-                if (__builtin_expect(fd->end, false)) { return att_dmg; }
+            if (!att_dmg) { on_attacked<def_cardtype>();return 0; }
 
-                // dmg-dep skills states (poisoned, inhibited, etc)
-                damage_dependant_pre_oa<def_cardtype>();
+            attack_damage<def_cardtype>();
 
-                // triggers
-                on_attacked<def_cardtype>();
-                if (!is_alive(att_status)) { return att_dmg; }
+            if (__builtin_expect(fd->end, false)) { return att_dmg; }
+            damage_dependant_pre_oa<def_cardtype>();
 
-                // evals dmg-dep skills/BGEs (counter, leech, devour)
-                if (__builtin_expect(post_attack_dmg_dependant_op<def_cardtype>(), false)) { return att_dmg; }
-            }
+            on_attacked<def_cardtype>();
+            if (!is_alive(att_status)) { return att_dmg; }
 
-            // evals dmg-indep skills/BGEs (subdue)
-            post_attack_dmg_independant_op<def_cardtype>();
 
-            return att_dmg;
-        }
-
-    // returns: true when attacker is dead (stop), false - is still alive (continue)
-    template<enum CardType::CardType def_cardtype>
-        bool post_attack_dmg_dependant_op()
-        {
             // Enemy Skill: Counter
             if (def_status->has_skill(Skill::counter))
             {
@@ -1544,7 +1524,7 @@ struct PerformAttack
                 }
 
                 // is attacker dead?
-                if (!is_alive(att_status)) { return true; }
+                if (!is_alive(att_status)) { return att_dmg; }
             }
 
             // Skill: Corrosive
@@ -1621,13 +1601,6 @@ struct PerformAttack
                 att_status->ext_hp(bge_value);
             }
 
-            // attacker is not dead
-            return false;
-        }
-
-    template<enum CardType::CardType def_cardtype>
-        void post_attack_dmg_independant_op()
-        {
             // Skill: Subdue
             unsigned subdue_value = def_status->skill(Skill::subdue);
             if (__builtin_expect(subdue_value, false))
@@ -1651,15 +1624,7 @@ struct PerformAttack
                 }
             }
 
-            // Increase Mark-counter
-            unsigned mark_base = att_status->skill(Skill::mark);
-            if (__builtin_expect(mark_base, false)
-                    && skill_check<Skill::mark>(fd, att_status, def_status)) {
-                _DEBUG_MSG(1, "%s marks %s for %u\n",
-                        status_description(att_status).c_str(),
-                        status_description(def_status).c_str(), mark_base);
-                def_status->m_marked += mark_base;
-            }
+            return att_dmg;
         }
 
     template<enum CardType::CardType>
@@ -1841,6 +1806,15 @@ struct PerformAttack
                         status_description(att_status).c_str(), (coalition_value + 1)/2);
                 att_status->add_hp((coalition_value + 1)/2);
             }
+
+            // Increase Mark-counter
+            unsigned mark_base = att_status->skill(Skill::mark);
+            if(mark_base && skill_check<Skill::mark>(fd,att_status,def_status)) {
+                _DEBUG_MSG(1, "%s marks %s for %u\n",
+                        status_description(att_status).c_str(), status_description(def_status).c_str(), mark_base);
+                def_status->m_marked += mark_base;
+            }
+
         }
 
     template<enum CardType::CardType>
@@ -3359,18 +3333,6 @@ Results<uint64_t> play(Field* fd,bool skip_init)
 
         }//>>> end skip init
         else { skip_init = false;}
-
-        //Skill: Enhance
-        //Perform later enhance for commander
-        check_and_perform_later_enhance(fd,&fd->tap->commander);
-        auto& structures(fd->tap->structures);
-        for(unsigned index(0); index < structures.size(); ++index)
-        {
-            CardStatus * status = &structures[index];
-            //enhance everything else after card was played
-            check_and_perform_later_enhance(fd,status);
-        }
-
         // Play a card
         const Card* played_card(fd->tap->deck->next(fd));
         if (played_card)

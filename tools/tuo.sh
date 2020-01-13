@@ -38,6 +38,8 @@ if (( ! found_ownedcards )) && (( TUO_RESTRICT_OWNEDCARDS )); then
     ARGS+=("-o=${TUO_ROOT}/data/ownedcards_${TUO_LOGIN}.txt")
 fi
 
+## append globally exported tuo flags
+ARGS+=($TUO_FLAGS)
 
 ## helper function: quote shell params
 quote () {
@@ -57,9 +59,11 @@ echo "pid: $$"
 echo "timestamp: $(date +%s) ($(date +'%F %T'))"
 echo "$info"
 
+## dump core
+#ulimit -c unlimited
+
 ## niceness settings (let's make execution less aggressive)
-declare -i niceness=15
-[[ -n $TUO_DECK ]] && niceness=10
+declare -i niceness=${TUO_NICENESS:-15}
 
 ## run tuo (use exec: replace the current process: tuo must have the same pid
 ## which was logged for managing simulation by using script tuo-kill-by-log.sh)

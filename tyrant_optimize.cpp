@@ -2995,10 +2995,11 @@ FinalResults<long double> run(int argc, char** argv)
 #ifndef NQUEST
 							      , quest
 #endif
-                                     );
-                             break;
+							      );
+					      break;
 
 				      }
+
 			case beam: {
 					      fr=beam_climb(std::get<0>(op), std::get<1>(op), your_decks, p, requirement
 #ifndef NQUEST
