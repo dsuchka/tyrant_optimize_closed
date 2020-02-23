@@ -27,7 +27,7 @@ XML_DIR = '~/3pp/tyrant_optimize/data/'
 DEFAULT_USER_DB_PATH = '~/.tu-deck-grabber.udb'
 DEFAULT_CONFIG_PATH = '~/.tu-deck-grabber.ini'
 
-TUC_VERSION = 'tuc v1'
+TUC_VERSION = 'tuc v1.1'
 
 #PROTOCOL = 'http'
 #API_HOST = 'localhost:8000'
@@ -188,23 +188,42 @@ rarity_id_to_name_scname_tuple = {
     6: ('Mythic', 'mt'),
 }
 
+fusion_id_to_name = {
+    0: 'Single',
+    1: 'Dual',
+    2: 'Quad',
+}
+
 def getFactionName(factionId):
-    return faction_id_to_name_scname_tuple[factionId][0]
+    if factionId in faction_id_to_name_scname_tuple:
+        return faction_id_to_name_scname_tuple[factionId][0]
+    return '(Unknown faction: {})'.format(factionId)
 
 def getFactionShortcutName(factionId):
-    return faction_id_to_name_scname_tuple[factionId][1]
+    if factionId in faction_id_to_name_scname_tuple:
+        return faction_id_to_name_scname_tuple[factionId][1]
+    return '(Unknown faction: {})'.format(factionId)
 
 def getRarityName(rarityId):
-    return rarity_id_to_name_scname_tuple[rarityId][0]
+    if rarityId in rarity_id_to_name_scname_tuple:
+        return rarity_id_to_name_scname_tuple[rarityId][0]
+    return '(Unknown rarity: {})'.format(rarityId)
 
 def getRarityShortcutName(rarityId):
-    return rarity_id_to_name_scname_tuple[rarityId][1]
+    if rarityId in rarity_id_to_name_scname_tuple:
+        return rarity_id_to_name_scname_tuple[rarityId][1]
+    return '(Unknown rarity: {})'.format(rarityId)
+
+def getFusionName(fusionId):
+    if fusionId in fusion_id_to_name:
+        return fusion_id_to_name[fusionId]
+    return '(Unknown fusion: {})'.format(fusionId)
 
 def parseUnitSkills(root):
     skills = []
     for skill_node in getAllChildElementNodes(root, 'skill'):
         skill = {}
-        for x in ('id', 'x', 'y', 'all', 'trigger', 'n', 'c', 'card_id'):
+        for x in ('id', 'x', 'y', 'all', 'trigger', 'n', 'c', 's', 'card_id'):
             v = skill_node.getAttributeNode(x)
             if v:
                 skill[x] = v.value
@@ -212,6 +231,26 @@ def parseUnitSkills(root):
             raise Exception('skill without id: {}'.format(skill))
         skills.append(skill)
     return skills
+
+def formatUnitSkill(skill):
+    fmt = skill['id']
+    if 'trigger' in skill and skill['trigger']:
+        fmt = '[On {}] {}'.format(skill['trigger'], fmt)
+    if 'n' in skill and skill['n']:
+        fmt += ' ' + str(skill['n'])
+    elif 'all' in skill and skill['all']:
+        fmt += ' all'
+    if 'y' in skill and skill['y']:
+        fmt += ' ' + getFactionName(int(skill['y']))
+    if 's' in skill and skill['s']:
+        fmt += ' ' + str(skill['s'])
+    if 'x' in skill and skill['x']:
+        fmt += ' ' + str(skill['x'])
+    if 'c' in skill and skill['c']:
+        fmt += ' every ' + str(skill['c'])
+    if 'card_id' in skill and skill['card_id']:
+        fmt += ' [card "{}"]'.format(getCardNameById(int(skill['card_id'])))
+    return fmt
 
 for i in range(1, 100):
     xml_fname = os.path.join(os.path.expanduser(XML_DIR), 'cards_section_{}.xml'.format(i))
@@ -283,7 +322,7 @@ for i in range(1, 100):
             card_next['attack'] = upgrade_get('attack', int) or card_prev['attack']
             card_next['delay'] = upgrade_get('cost', int) or card_prev['delay']
             card_next['full_name'] =  '{}-{}'.format(card_next['name'], card_next['level'])
-            card_next['skills'] = parseUnitSkills(upgrade) or  card_prev['skills']
+            card_next['skills'] = parseUnitSkills(upgrade) or card_prev['skills']
             top_level_id = card_next['id']
             file_cards_by_id[top_level_id] = card_next
             card_prev = card_next
@@ -489,9 +528,9 @@ class TUApiClient:
                 return None
             return typ(d[name])
         def _set_f_r_cards(c_id, count):
-            c = id_to_cards[c_id]
-            if not c:
+            if c_id not in id_to_cards:
                 raise Exception('No such card: id=' + str(c_id))
+            c = id_to_cards[c_id]
             f = c['faction']
             r = c['rarity']
             if f not in f_r_cards:
@@ -684,8 +723,29 @@ with PoolManager(1,
             break
         elif not line:
             continue
-        line = line.strip().lower()
-        args = re.split(r'\s+', line)
+        args = []
+        line = line.strip() + ' '
+        word = None
+        quote = False
+        esc = False
+        for c in line:
+            if not esc:
+                if c == '\\':
+                    esc = True
+                    continue
+                if c == ' ' and not quote:
+                    if word:
+                        args.append(word)
+                        word = None
+                    continue
+                if c == '"':
+                    quote = not quote
+                    continue
+            else:
+                esc = False
+            if not quote:
+                c = c.lower()
+            word = word + c if word else c
         if args[0] == 'exit':
             break
         if args[0] == 'init':
@@ -713,6 +773,37 @@ with PoolManager(1,
                     rsp = client.salvageCard(cid)
             sp = rsp['user_data']['salvage']
             print('SP: {}'.format(sp))
+            continue
+        if args[0] == 'card':
+            if len(args) < 2:
+                print('USAGE: card <ID|"NAME"|"/REGEX/">')
+                continue
+            def showCard(card):
+                print(' >> Card [{}] {}'.format(card['id'], card['full_name']))
+                print('    {} {} {} (set {})'.format(
+                    getFusionName(card['fusion']),
+                    getRarityName(card['rarity']),
+                    getFactionName(card['faction']),
+                    card['set']
+                ))
+                print('    ATT {} / HP {} / CD {}'.format(card['attack'], card['hp'], card['delay']))
+                for s in card['skills']:
+                    print ('      >  ' + formatUnitSkill(s))
+            if re.match(r'^\d+$', args[1]):
+                c_id = int(args[1])
+                if c_id not in id_to_cards:
+                    print('No such card: id=' + args[1])
+                    continue
+                showCard(id_to_cards[c_id])
+            else:
+                if re.match(r'^/.+/$', args[1]):
+                    pattern_regex = re.compile(args[1][1:-1])
+                    pattern_pred = lambda c: pattern_regex.match(c['full_name']) and c['maxed']
+                else:
+                    pattern_pred = lambda c: c['full_name'] == args[1]
+                for c in id_to_cards.values():
+                    if pattern_pred(c):
+                        showCard(c)
             continue
         if args[0] == 'dump':
             if len(args) < 2:
