@@ -318,12 +318,13 @@ public:
     enum phase
     {
         playcard_phase,
+        bge_phase,
         commander_phase,
         structures_phase,
         assaults_phase,
         end_phase,
     };
-    // the current phase of the turn: starts with playcard_phase, then commander_phase, structures_phase, and assaults_phase
+    // the current phase of the turn: starts with playcard_phase, then bge_phase, commander_phase, structures_phase, and assaults_phase
     phase current_phase;
     // the index of the card being evaluated in the current phase.
     // Meaningless in playcard_phase,

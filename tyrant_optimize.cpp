@@ -210,10 +210,11 @@ void init()
 
 	//fix defaults
 	for (int i=0; i < Fix::num_fixes;++i) fixes[i]=false;
-	//recommended/default fixes
+
+    //recommended/default fixes
 	fixes[Fix::enhance_early] = true;
 	fixes[Fix::revenge_on_death] = true;
-
+	fixes[Fix::death_from_bge] = true;
 }
 
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -2094,6 +2095,10 @@ FinalResults<long double> run(int argc, char** argv)
 		else if (strcmp(argv[argIndex], "fix-revenge-on-death") == 0)
 		{
 			fixes[Fix::revenge_on_death] = true;
+		}
+		else if (strcmp(argv[argIndex], "fix-death-from-bge") == 0)
+		{
+			fixes[Fix::death_from_bge] = true;
 		}
 		else if (strcmp(argv[argIndex], "seed") == 0)
 		{

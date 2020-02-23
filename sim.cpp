@@ -454,6 +454,13 @@ void prepend_on_death(Field* fd,bool paybacked=false)
 {
     if (fd->killed_units.empty())
         return;
+    if (__builtin_expect(fd->fixes[Fix::death_from_bge], true)
+        && __builtin_expect(fd->current_phase == Field::bge_phase, false))
+    {
+        _DEBUG_MSG(2, "Death from BGE Fix (skip all death depended triggers)\n");
+        fd->killed_units.clear();
+        return;
+    }
     auto& assaults = fd->players[fd->killed_units[0]->m_player]->assaults;
     unsigned stacked_poison_value = 0;
     unsigned last_index = 99999;
@@ -3456,6 +3463,7 @@ Results<uint64_t> play(Field* fd,bool skip_init)
         }
 
         // Evaluate activation BGE skills
+        fd->current_phase = Field::bge_phase;
         for (const auto & bg_skill: fd->bg_skills[fd->tapi])
         {
             fd->prepare_action();
