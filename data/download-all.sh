@@ -9,7 +9,7 @@ FILES=(
    fusion_recipes_cj2.xml
    missions.xml
    skills_set.xml
-   cards_section_{1..19}.xml
+   cards_section_{1..20}.xml
    items.xml
    levels.xml
    codex.xml
