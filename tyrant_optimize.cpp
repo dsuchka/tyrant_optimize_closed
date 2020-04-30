@@ -173,7 +173,9 @@ void init()
 	iterations_multiplier=10;
 	sim_seed=0;
 	flexible_iter=20;
-	flexible_turn=10;
+	flexible_turn=20;
+	eval_iter=8;
+	eval_turn=8;
 	requirement.num_cards.clear();
 #ifndef NQUEST
 	//quest = new Quest(); //TODO Quest bugged in Android now here
@@ -668,7 +670,7 @@ FinalResults<long double> compute_score(const EvaluatedResults& results, std::ve
 #ifndef NQUEST
 						quest,
 #endif
-						your_bg_effects, enemy_bg_effects, your_bg_skills, enemy_bg_skills,fixes, flexible_iter,flexible_turn);
+						your_bg_effects, enemy_bg_effects, your_bg_skills, enemy_bg_skills,fixes, flexible_iter,flexible_turn, eval_iter,eval_turn);
 				Results<uint64_t> result(play(&fd));
 				if (__builtin_expect(mode_open_the_deck, false))
 				{
@@ -1300,7 +1302,7 @@ if (deck->alpha_dominion)
 { std::cout << ", " << deck->alpha_dominion->m_name; }
 
 // print deck cards
-if (deck->strategy == DeckStrategy::random || deck->strategy == DeckStrategy::flexible)
+if (deck->strategy == DeckStrategy::random || deck->strategy == DeckStrategy::flexible || deck->strategy == DeckStrategy::evaluate|| deck->strategy == DeckStrategy::evaluate_twice)
 {
 	std::sort(deck->cards.begin(), deck->cards.end(), [](const Card* a, const Card* b) { return a->m_id < b->m_id; });
 }
@@ -1983,9 +1985,37 @@ FinalResults<long double> run(int argc, char** argv)
 			flexible_turn = atoi(argv[argIndex+1]);
 			argIndex += 1;
 		}
+		else if (strcmp(argv[argIndex], "evaluate") == 0 || strcmp(argv[argIndex], "eval") == 0)
+		{
+			opt_your_strategy = DeckStrategy::evaluate;
+		}
+		else if (strcmp(argv[argIndex], "evaluate2") == 0 || strcmp(argv[argIndex], "eval2") == 0)
+		{
+			opt_your_strategy = DeckStrategy::evaluate_twice;
+		}
+		else if (strcmp(argv[argIndex], "eval-iter") == 0)
+		{
+			if(check_input_amount(argc,argv,argIndex,1))exit(1);
+			eval_iter = atoi(argv[argIndex+1]);
+			argIndex += 1;
+		}
+		else if (strcmp(argv[argIndex], "eval-turn") == 0)
+		{
+			if(check_input_amount(argc,argv,argIndex,1))exit(1);
+			eval_turn = atoi(argv[argIndex+1]);
+			argIndex += 1;
+		}
 		else if (strcmp(argv[argIndex], "exact-ordered") == 0)
 		{
 			opt_your_strategy = DeckStrategy::exact_ordered;
+		}
+		else if (strcmp(argv[argIndex], "enemy:evaluate") == 0)
+		{
+			opt_enemy_strategy = DeckStrategy::evaluate;
+		}
+		else if (strcmp(argv[argIndex], "enemy:evaluate2") == 0)
+		{
+			opt_enemy_strategy = DeckStrategy::evaluate_twice;
 		}
 		else if (strcmp(argv[argIndex], "enemy:flexible") == 0)
 		{

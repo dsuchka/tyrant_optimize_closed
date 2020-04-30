@@ -44,7 +44,7 @@ before_deploy:
   - source build/${TUO_TARGET}/package.sh
 deploy:
   provider: releases
-  name: "${TRAVIS_COMMIT_MESSAGE}"
+  name: "${TRAVIS_BUILD_NUMBER}"
   api_key:
     secure: vKTCOsNwCpSzB2buiNSroCvhAR5xHv86L7YDa09A3Y4oZ/grFmcARQKFkjG/zJif+4gpHmrscUJIC4Ru9900QQSVP/mUh5NizPFpoQHHQBbRPOFoor0W0lSXhsFMA154sHICDQ7ZZhZbF8s804VL+JsmAblFqJ0XWNtLD9f0ElklEIELYdhVGDipXhWnIqA3TfG6ztm9KjMXZ3pfPRMf/l4D0t7ISHfzfX07O257ppH83DAEs1aJElG3kxDJiEWoi6k9fq7SIYXbFhmwj6aM3K//qj9ZxIhFwRLaEb8l2zOXj3hNtDGGg99P5Dz7UeDy7l/+eWOgIMBJLe1Ck9AbIYivnOychYxVn/wp56SbbaT1ZsNbgLQxygqc0/btfi2lrT9c0T6db+A9LSGOWvGk3n1pOPOMNE3wvOk7dhLfbA2azFDMoPswW7Hvad0ZQYkBg1TJK7gmChb5FYQtypZzA0CzJaw+r1z7d4a7mF7cAkZmGuM+/BbdmsX9AxYcazJAvsxgHmLnFSunKsw0B3kQ6l9DJmli7w4qi4kdjHGpxQCQ6ocqHmDMvFa85ejhvPjJDvYdyxltC1d5Jq+jxFL91d+2ZMGYdgptR05I0Dc9ApUcItv7NNbY8fNPWJT7AXAlY999bRt9Rz//JvSHUHstn5cc1s0ee6NGRTmiD5oAkuc=
   file_glob: true

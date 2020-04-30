@@ -65,7 +65,7 @@ bool operator <(const FinalResults<result_type>& x, const FinalResults<result_ty
 }
 
 void fill_skill_table();
-Results<uint64_t> play(Field* fd, bool skip_init=false);
+Results<uint64_t> play(Field* fd, bool skip_init=false, bool skip_preplay=false , unsigned turns_both=0);
 // Pool-based indexed storage.
 //---------------------- Pool-based indexed storage ----------------------------
 template<typename T>
@@ -301,6 +301,9 @@ public:
     unsigned turn;
     unsigned flexible_iter = 20;
     unsigned flexible_turn = 20;
+    unsigned eval_iter = 10;
+    unsigned eval_turn = 20;
+
     gamemode_t gamemode;
     OptimizationMode optimization_mode;
 #ifndef NQUEST
@@ -347,7 +350,7 @@ public:
             std::array<signed short, PassiveBGE::num_passive_bges>& enemy_bg_effects_,
             std::vector<SkillSpec>& your_bg_skills_,
             std::vector<SkillSpec>& enemy_bg_skills_,bool (&fixes_)[Fix::num_fixes],
-			unsigned flexible_iter_=20,unsigned flexible_turn_=10) :
+	    unsigned flexible_iter_=20,unsigned flexible_turn_=20,unsigned eval_iter_=10,unsigned eval_turn_=20) :
         end{false},
         re(re_),
         cards(cards_),
@@ -355,6 +358,9 @@ public:
         turn(1),
 	    flexible_iter(flexible_iter_),
 	    flexible_turn(flexible_turn_),
+	    eval_iter(eval_iter_),
+	    eval_turn(eval_turn_),
+
         gamemode(gamemode_),
         optimization_mode(optimization_mode_),
 #ifndef NQUEST

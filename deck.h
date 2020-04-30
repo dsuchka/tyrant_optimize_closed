@@ -26,6 +26,8 @@ enum DeckStrategy
     ordered,
     exact_ordered,
     flexible,
+    evaluate,
+    evaluate_twice,
     num_deckstrategies
 };
 }

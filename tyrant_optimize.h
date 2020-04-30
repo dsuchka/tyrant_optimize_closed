@@ -57,6 +57,8 @@ namespace tuo {
 	EXTERN unsigned sim_seed;
 	EXTERN unsigned flexible_iter;
 	EXTERN unsigned flexible_turn;
+	EXTERN unsigned eval_iter;
+	EXTERN unsigned eval_turn;
 	EXTERN Requirement requirement;
 #ifndef NQUEST
 	EXTERN Quest quest;
