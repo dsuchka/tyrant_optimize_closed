@@ -217,6 +217,7 @@ void init()
 	fixes[Fix::enhance_early] = true;
 	fixes[Fix::revenge_on_death] = true;
 	fixes[Fix::death_from_bge] = true;
+	fixes[Fix::legion_under_mega] = true;
 }
 
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -2129,6 +2130,10 @@ FinalResults<long double> run(int argc, char** argv)
 		else if (strcmp(argv[argIndex], "fix-death-from-bge") == 0)
 		{
 			fixes[Fix::death_from_bge] = true;
+		}
+		else if (strcmp(argv[argIndex], "fix-legion-under-megamorphosis") == 0)
+		{
+			fixes[Fix::legion_under_mega] = true;
 		}
 		else if (strcmp(argv[argIndex], "seed") == 0)
 		{

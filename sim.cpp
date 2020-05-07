@@ -1684,7 +1684,7 @@ struct PerformAttack
                 if (__builtin_expect(legion_base, false))
                 {
                     unsigned itr_idx, till_idx;
-                    bool bge_megamorphosis = fd->bg_effects[fd->tapi][PassiveBGE::megamorphosis];
+                    bool bge_megamorphosis = fd->bg_effects[fd->tapi][PassiveBGE::megamorphosis] && !fd->fixes[Fix::legion_under_mega];
                     //scan all assaults for Global Legion
                     itr_idx = 0;
                     till_idx = att_assaults.size() - 1;

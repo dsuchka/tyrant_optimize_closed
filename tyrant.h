@@ -20,6 +20,7 @@ enum Fix
     enhance_early,
     revenge_on_death,
     death_from_bge,
+    legion_under_mega,
     num_fixes
 };
 
