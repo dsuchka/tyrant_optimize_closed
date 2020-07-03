@@ -1,34 +1,34 @@
 // Guild War BGEs
 Halcyon's Command: Enhance All Armor 8; Heal All Imperial 10; Enrage Imperial 4
 Typhon's Blood: Enhance All Refresh 8; Enrage All Bloodthirsty 5; Heal 16
-Sandblast: Entrap All 10; Weaken All 10
-Plasma Burst: Heal 15; Protect 15; Sunder 15
-Landmine: Entrap 38
-Inspired: Rally all 7
-Blightblast: Enfeeble all 6
+Sandblast: Entrap all 50; Weaken All 50
+Plasma Burst: Heal all 60; Protect all 60; Sunder all 60
+Landmine: Entrap all 60
+Inspired: Rally all 60
+Blightblast: Enfeeble all 60
 Bombing Run: Strike all 3
-Triage: Enhance Fortify 9; Heal all 18
-Charged Up: Overload 3
-Combined Arms: Enhance All Coalition 3; Rally+Enfeeble+Strike all 3
+Triage: Enhance Fortify 50; Heal all 50
+Charged Up: Overload all
+Combined Arms: Enhance All Coalition 30; Rally all 30; Enfeeble all 30; Strike all 30
 Blitzkrieg: Rush
 Paladin's Presence: Protect all 3
 Viral Warfare: Enhance all Poison 3
-Progenitor Tech: Heal+Protect+Rally+Enfeeble+Strike+Weaken all 4
+Progenitor Tech: Heal all 40; Protect all 40; Rally all 40; Enfeeble all 40; Strike all 40; Weaken all 40
 Diminisher: Sunder all 2
-Divine Blessing: Heal all 10; Rally all 7
+Divine Blessing: Heal all 50; Rally all 50
 Opalescence: Heal+Protect all 2
 Power Source: Overload 1
 Ferocity: Enrage 6
-Tartarian Gift: Rally all 10; Enrage all 10
-Artillery: Enhance Mortar 4; Mortar all 18
+Tartarian Gift: Rally all 50; Enrage all 50
+Artillery: Enhance Mortar 40; Mortar all 50
 //Orbital Cannon: Strike 16
 Orbital Cannon: Enfeeble 14
 Bloodthirst: Enhance All Leech 6
-Emergency Aid: Heal 48
+Emergency Aid: Heal All 60
 Extended Reach: Enhance All Swipe 5
-Mirror Madness: Mimic 16
+Mirror Madness: Mimic 160
 Eternal Backlash: Enhance All Counter 6; Entrap 6
-Winter Tempest: Enhance all subdue 10; Protect All 5; Weaken All 7
+Winter Tempest: Enhance all subdue 40; Protect All 40; Weaken All 40
 Sulfuris Essence: Evolve All Poison Venom; Enhance All Venom 6
 Way of the Forsaken: Enhance All Corrosive 8; Heal All Raider 7; Enfeeble 7
 Critical Blast: Enhance All Swipe 4; Enfeeble All 4
