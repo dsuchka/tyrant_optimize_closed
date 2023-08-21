@@ -10,14 +10,14 @@ ${warning "VERSION is not set (USING NO VERSION instead), use make VERSION=vX.XX
 endif
 endif
 
-CPPFLAGS := -Wall -Werror -std=gnu++11 -Ofast -g -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)--test"' -DTEST -DNQUEST -DNTIMER -fprofile-arcs -ftest-coverage
+CPPFLAGS := -Wall -Werror -std=gnu++14 -Ofast -g -DTYRANT_OPTIMIZER_VERSION='"$(VERSION)--test"' -DTEST -DNQUEST -DNTIMER -fprofile-arcs -ftest-coverage
 LDFLAGS := -lboost_system -lboost_thread -lboost_filesystem -lboost_regex -lboost_timer -lboost_unit_test_framework -fprofile-arcs
 
 all: $(MAIN)
 
 obj-test/%.o: %.cpp $(INCS)
 	-@if not exist "obj-test" mkdir "obj-test"
-	$(CXX) $(CPPFLAGS) -o $@ -c $<
+	$(CXX) $(CPPFLAGS) -I extern/hPMML/include -o $@ -c $<
 
 $(MAIN): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)

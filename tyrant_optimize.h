@@ -4,6 +4,10 @@
 #include <iostream>
 #include <boost/thread/thread.hpp>
 #include <chrono>
+#include <array>
+#include <vector>
+#include "hPMML.h"
+
 // OpenMP Header
 #ifdef _OPENMP
 #include <omp.h>
@@ -24,7 +28,9 @@ struct Requirement
 #else
 #define EXTERN extern
 #endif
+
 namespace tuo {
+	EXTERN Cards all_cards;
 	EXTERN unsigned opt_num_threads;
 	EXTERN gamemode_t gamemode;
 	EXTERN OptimizationMode optimization_mode;
@@ -50,6 +56,7 @@ namespace tuo {
 	EXTERN unsigned use_fused_commander_level;
 	EXTERN bool print_upgraded;
 	EXTERN bool print_values;
+	EXTERN int vc_x;
 	EXTERN bool simplify_output;
 	EXTERN bool show_ci;
 	EXTERN bool use_harmonic_mean;
@@ -60,11 +67,17 @@ namespace tuo {
 	EXTERN unsigned eval_iter;
 	EXTERN unsigned eval_turn;
 	EXTERN Requirement requirement;
+	EXTERN double hp_scale;
+	EXTERN double atk_scale;
+	EXTERN std::map<Skill::Skill,double> x_skill_scale;
+	EXTERN std::map<Skill::Skill,double> n_skill_scale;
+	EXTERN std::map<Skill::Skill,double> c_skill_scale;
 #ifndef NQUEST
 	EXTERN Quest quest;
 #endif
 	EXTERN std::unordered_set<unsigned> allowed_candidates;
 	EXTERN std::unordered_set<unsigned> disallowed_candidates;
+	EXTERN std::unordered_set<unsigned> disallowed_recipes;
 	EXTERN std::chrono::time_point<std::chrono::system_clock> start_time;
 	EXTERN long double maximum_time;
 	//anneal
@@ -95,6 +108,21 @@ namespace tuo {
 	//fixes
 	EXTERN bool fixes[Fix::num_fixes];
 
+    // TUO5 db of results
+    // map<hash of proc,ydeck edeck decks but also more,result>
+    //EXTERN std::map<std::string, Results<uint64_t>> database;
+	EXTERN std::map<std::string,std::map<std::string,std::map<std::string,Results<uint64_t>>>> database;
+    EXTERN hpmml::Model win_model, loss_model, stall_model, points_model;
+
+    EXTERN long int db_limit;
+    EXTERN bool use_strict_db;
+    EXTERN bool use_db_load;
+    EXTERN bool use_db_write;
+
+    EXTERN bool use_ml;
+    EXTERN bool use_only_ml;
+    EXTERN double ml_precision;
+
 #if defined(ANDROID) || defined(__ANDROID__)
 	EXTERN JNIEnv *envv;
 	EXTERN jobject objv;
@@ -123,10 +151,10 @@ void thread_evaluate(boost::barrier& main_barrier,
 		SimulationData& sim,
 		const Process& p,
 		unsigned thread_id);
-#ifndef TEST
-int main(int argc, char** argv);
+#if !defined(TEST)
+int main(int argc, const char** argv);
 #endif
-FinalResults<long double> run(int argc, char** argv);
+DeckResults run(int argc, const char** argv);
 void init();
 bool is_timeout_reached();
 bool valid_deck(Deck* your_deck);
@@ -138,10 +166,10 @@ std::vector<Results<uint64_t>> merge(std::vector<Results<uint64_t>> out, std::ve
 // some print functions
 void print_score_info(const EvaluatedResults& results, std::vector<long double>& factors);
 void print_results(const EvaluatedResults& results, std::vector<long double>& factors);
-void print_cards_inline(std::vector<const Card*> cards);
+void print_cards_inline(std::vector<const Card*> cards,std::ostream& =std::cout, Deck* =nullptr);
 void print_score_inline(const FinalResults<long double> score);
 void print_sim_card_values(Deck* original_deck, Process& p, unsigned iter); // run_deck == p.your_decks[0]
-void print_deck_inline(const unsigned deck_cost, const FinalResults<long double> score, Deck * deck);
+void print_deck_inline(const unsigned deck_cost, const FinalResults<long double> score, Deck * deck,bool print_locked=false);
 void print_upgraded_cards(Deck* deck);
 
 struct SimulationData
@@ -201,7 +229,10 @@ struct SimulationData
 	}
 
   void set_decks(std::vector<Deck*> const your_decks_, std::vector<Deck*> const & enemy_decks_);
-  inline std::vector<Results<uint64_t>> evaluate();
+  inline std::vector<Results<uint64_t>> evaluate(const  std::vector<bool> & deck_mask);
+  inline std::vector<Results<uint64_t>> evaluate() ;
+
+
 };
 class Process
 {
@@ -222,6 +253,7 @@ public:
     #endif
     std::array<signed short, PassiveBGE::num_passive_bges> your_bg_effects, enemy_bg_effects;
     std::vector<SkillSpec> your_bg_skills, enemy_bg_skills;
+    std::vector<bool> mask;
   public:
     Process(unsigned num_threads_, const Cards& cards_, const Decks& decks_, std::vector<Deck*> your_decks_, std::vector<Deck*> enemy_decks_, std::vector<long double> factors_, gamemode_t gamemode_,
 #ifndef NQUEST
@@ -246,6 +278,7 @@ public:
 			your_bg_skills(your_bg_skills_),
 			enemy_bg_skills(enemy_bg_skills_)
 			{
+                mask = std::vector<bool>(your_decks.size() * enemy_decks.size(), true);
 				destroy_threads = false;
 				unsigned seed(sim_seed ? sim_seed : std::chrono::system_clock::now().time_since_epoch().count() * 2654435761);  // Knuth multiplicative hash
 				if (num_threads_ == 1)
@@ -274,9 +307,20 @@ public:
 			for (auto thread: threads) { thread->join(); }
 			for (auto data: threads_data) { delete(data); }
 		}
+  // all hashed except the array of decks
+  std::string partial_hash();
+  std::vector<unsigned int> partial_ids();
+  // all hashed
+  std::vector<std::array<std::string,3>> hashes();
+  std::vector<std::unordered_map<std::string,std::string>> samples();
+
+   bool eval_ml(unsigned num_iterations, EvaluatedResults & evaluated_results);
+   bool check_db(std::vector<std::array<std::string,3>> const & vhashes,unsigned num_iterations, EvaluatedResults & evaluated_results);
+   void save_db(std::vector<std::array<std::string,3>>  const & vhashes,EvaluatedResults & evaluated_results);
 
     EvaluatedResults & evaluate(unsigned num_iterations, EvaluatedResults & evaluated_results);
     EvaluatedResults & compare(unsigned num_iterations, EvaluatedResults & evaluated_results, const FinalResults<long double> & best_results);
+
 #ifdef _OPENMP
 		void openmp_evaluate_reduction(EvaluatedResults & evaluated_results);
     void openmp_compare_reduction(EvaluatedResults & evaluated_results);

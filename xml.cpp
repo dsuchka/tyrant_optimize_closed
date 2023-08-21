@@ -12,6 +12,7 @@
 #include "cards.h"
 #include "deck.h"
 #include "tyrant.h"
+#include "tyrant_optimize.h"
 //---------------------- $20 cards.xml parsing ---------------------------------
 // Sets: 1 enclave; 2 nexus; 3 blight; 4 purity; 5 homeworld;
 // 6 phobos; 7 phobos aftermath; 8 awakening
@@ -152,6 +153,7 @@ bool parse_file(const std::string & filename, std::vector<char>& buffer, xml_doc
 //------------------------------------------------------------------------------
 void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
 {
+    double eps = 1e-4;
     xml_node<>* id_node(card_node->first_node("id"));
     xml_node<>* card_id_node = card_node->first_node("card_id");
     assert(id_node || card_id_node);
@@ -171,8 +173,15 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
     if (name_node) { card->m_name = name_node->value(); }
     if (level_node) { card->m_level = atoi(level_node->value()); }
     if (fusion_level_node) { card->m_fusion_level = atoi(fusion_level_node->value()); }
-    if (attack_node) { card->m_attack = atoi(attack_node->value()); }
-    if (health_node) { card->m_health = atoi(health_node->value()); }
+    if (attack_node) { card->m_attack = atoi(attack_node->value()); 
+	    if(abs(1-atk_scale)>eps)
+		card->m_attack = ceil(card->m_attack/(atk_scale));
+}
+    if (health_node) { card->m_health = atoi(health_node->value()); 
+	    if(abs(1-hp_scale)>eps)
+		card->m_health = ceil(card->m_health/(hp_scale));
+
+    }
     if (cost_node) { card->m_delay = atoi(cost_node->value()); }
     if (id_node)
     {
@@ -314,6 +323,16 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
         auto s2 = skill_target_skill(skill_node, "s2");
         bool all = skill_node->first_attribute("all");
         auto card_id = node_value(skill_node, "card_id", 0);
+	//scaling
+	if(abs(1-x_skill_scale[Skill::no_skill]*x_skill_scale[skill_id==Skill::enhance?s:skill_id])>eps)
+		x = ceil(x/(x_skill_scale[Skill::no_skill]*x_skill_scale[skill_id==Skill::enhance?s:skill_id]));
+	if(abs(1-n_skill_scale[Skill::no_skill]*n_skill_scale[skill_id])>eps)
+		n = ceil(n/(n_skill_scale[Skill::no_skill]*n_skill_scale[skill_id]));
+	if(abs(1-c_skill_scale[Skill::no_skill]*c_skill_scale[skill_id])>eps)
+		c = ceil(c/(c_skill_scale[Skill::no_skill]*c_skill_scale[skill_id]));
+
+
+
         card->add_skill(trig, skill_id, x, y, n, c, s, s2, all, card_id);
     }
     all_cards.all_cards.push_back(card);
@@ -476,7 +495,7 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
         {
             auto skill_name = skill_node->first_attribute("id")->value();
             Skill::Skill skill_id = skill_name_to_id(skill_name);
-            if (skill_id == Skill::no_skill) { throw std::runtime_error("unknown skill id:" + to_string(skill_name)); }
+            if (skill_id == Skill::no_skill) { throw std::runtime_error("unknown skill id:" + tuo::to_string(skill_name)); }
             auto x = node_value_float(skill_node, "x", 0.0);
             auto y = skill_faction(skill_node);
             auto n = node_value(skill_node, "n", 0);
@@ -572,7 +591,7 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
 
     for (unsigned level = 1; level < max_level; ++ level)
     {
-        std::string deck_name = base_deck_name + "-" + to_string(level);
+        std::string deck_name = base_deck_name + "-" + tuo::to_string(level);
         unsigned upgrade_points = ceil(upgrade_opportunities * (level - 1) / (double)(max_level - 1));
         decks.decks.push_back(Deck{all_cards, decktype, id, deck_name, upgrade_points, upgrade_opportunities});
         Deck* deck = &decks.decks.back();
@@ -581,7 +600,7 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
         deck->effects = effects;
         deck->level = level;
         decks.add_deck(deck, deck_name);
-        decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id) + "-" + to_string(level));
+        decks.add_deck(deck, decktype_names[decktype] + " #" + tuo::to_string(id) + "-" + tuo::to_string(level));
     }
 
     decks.decks.push_back(Deck{all_cards, decktype, id, base_deck_name});
@@ -613,9 +632,9 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
     }
 
     decks.add_deck(deck, base_deck_name);
-    decks.add_deck(deck, base_deck_name + "-" + to_string(max_level));
-    decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id));
-    decks.add_deck(deck, decktype_names[decktype] + " #" + to_string(id) + "-" + to_string(max_level));
+    decks.add_deck(deck, base_deck_name + "-" + tuo::to_string(max_level));
+    decks.add_deck(deck, decktype_names[decktype] + " #" + tuo::to_string(id));
+    decks.add_deck(deck, decktype_names[decktype] + " #" + tuo::to_string(id) + "-" + tuo::to_string(max_level));
     decks.by_type_id[{decktype, id}] = deck;
     return deck;
 }

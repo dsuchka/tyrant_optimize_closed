@@ -2,18 +2,21 @@
 
 set -xue
 
-sudo add-apt-repository -y ppa:mhier/libboost-latest
 sudo apt-get update
+sudo apt-get install libssl-dev
 
-echo "deb http://mirror.mxe.cc/repos/apt/ trusty main" \
-    | sudo tee /etc/apt/sources.list.d/mxeapt.list
-sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C6BF758A33A3A276
+sudo apt-key adv \
+    --keyserver keyserver.ubuntu.com \
+    --recv-keys 86B72ED9 && \
+sudo add-apt-repository \
+    "deb [arch=amd64] https://pkg.mxe.cc/repos/apt `lsb_release -sc` main" && \
+
 
 sudo apt-get update
 #Linux
 sudo apt-get --yes install \
     g++ make cmake \
-    libboost1.68-dev \
+    libboost-all-dev
 #Windows
 MXE_TARGET=i686-w64-mingw32.static
 MXE2_TARGET=$(echo "$MXE_TARGET" | sed 's/_/-/g')

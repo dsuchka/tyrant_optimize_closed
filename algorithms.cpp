@@ -9,7 +9,11 @@ inline bool try_improve_deck(Deck* d1, unsigned from_slot, unsigned to_slot, con
 		const Card*& best_commander, const Card*& best_alpha_dominion, std::vector<const Card*>& best_cards,
 		FinalResults<long double>& best_score, unsigned& best_gap, std::string& best_deck,
 		std::unordered_map<std::string, EvaluatedResults>& evaluated_decks, EvaluatedResults& zero_results,
-		unsigned long& skipped_simulations, Process& proc, bool print=true)
+		unsigned long& skipped_simulations, Process& proc, bool print
+#ifndef NQUEST
+		, Quest & quest
+#endif
+        )
 {
 	unsigned deck_cost(0);
 	std::vector<std::pair<signed, const Card *>> cards_out, cards_in;
@@ -119,14 +123,14 @@ Deck* filter_best_deck(std::vector<Deck*> your_decks, Deck* d1,
 			best_score = cur_score;
 
 			std::cout << "Deck improved: " << d1->hash() <<":";
-			print_deck_inline(get_deck_cost(d1), best_score, d1);
+			print_deck_inline(get_deck_cost(d1), best_score,d1);
 		}
 	}
 	return cur_return;
 }
 
 //------------------------------------------------------------------------------
-FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks , Process& proc, Requirement & requirement
+DeckResults hill_climbing(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks , Process& proc, Requirement & requirement
 #ifndef NQUEST
 		, Quest & quest
 #endif
@@ -151,7 +155,7 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 	std::vector<const Card*> best_cards = d1->cards;
 	unsigned deck_cost = get_deck_cost(d1);
 	fund = std::max(fund, deck_cost);
-	print_deck_inline(deck_cost, best_score, d1);
+	print_deck_inline(deck_cost, best_score, d1,true);
 	std::mt19937& re = proc.threads_data[0]->re;
 	unsigned best_gap = check_requirement(d1, requirement
 #ifndef NQUEST
@@ -223,7 +227,6 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 			d1->cards = best_cards;
 			auto evaluate_result = proc.evaluate(std::min(prev_results.second * iterations_multiplier, num_iterations), prev_results);
 			best_score = compute_score(evaluate_result, proc.factors);
-			std::cout << "Results refined: ";
 			print_score_info(evaluate_result, proc.factors);
 			dead_slot = from_slot;
 		}
@@ -242,7 +245,11 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 				{ continue; }
 				deck_has_been_improved |= try_improve_deck(d1, -1, -1, commander_candidate,
 						best_commander, best_alpha_dominion, best_cards, best_score, best_gap, best_deck,
-						evaluated_decks, zero_results, skipped_simulations, proc);
+						evaluated_decks, zero_results, skipped_simulations, proc,true
+#ifndef NQUEST
+			, quest
+#endif
+                        );
 			}
 			// Now that all commanders are evaluated, take the best one
 			d1->commander = best_commander;
@@ -262,7 +269,11 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 				{ continue; }
 				deck_has_been_improved |= try_improve_deck(d1, -1, -1, alpha_dominion_candidate,
 						best_commander, best_alpha_dominion, best_cards, best_score, best_gap, best_deck,
-						evaluated_decks, zero_results, skipped_simulations, proc);
+						evaluated_decks, zero_results, skipped_simulations, proc,true
+#ifndef NQUEST
+			, quest
+#endif
+                        );
 			}
 			// Now that all alpha dominions are evaluated, take the best one
 			d1->commander = best_commander;
@@ -289,7 +300,11 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 				{ continue; }
 				deck_has_been_improved |= try_improve_deck(d1, from_slot, to_slot, card_candidate,
 						best_commander, best_alpha_dominion, best_cards, best_score, best_gap, best_deck,
-						evaluated_decks, zero_results, skipped_simulations, proc);
+						evaluated_decks, zero_results, skipped_simulations, proc,true
+#ifndef NQUEST
+			, quest
+#endif
+                        );
 			}
 			if (best_score.points - target_score > -1e-9)
 			{ break; }
@@ -303,11 +318,11 @@ FinalResults<long double> hill_climbing(unsigned num_min_iterations, unsigned nu
 	for (auto evaluation: evaluated_decks)
 	{ simulations += evaluation.second.second; }
 	std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
-	std::cout << "Optimized Deck: ";
-	print_deck_inline(get_deck_cost(d1), best_score, d1);
-	print_upgraded_cards(d1);
 	print_sim_card_values(d1,proc,num_iterations);
-	return best_score;
+	std::cout << "Optimized Deck: ";
+	print_deck_inline(get_deck_cost(d1), best_score, d1,true);
+	print_upgraded_cards(d1);
+	return std::make_pair(d1->clone(),best_score);
 }
 
 
@@ -324,7 +339,7 @@ inline long double acceptanceProbability(long double old_score, long double new_
 	return exp(((new_score-old_score)/temperature*1000*100)/max_possible_score[(size_t)optimization_mode]);
 }
 
-FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
+DeckResults simulated_annealing(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
 #ifndef NQUEST
 		, Quest & quest
 #endif
@@ -351,7 +366,7 @@ FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsig
 
 	unsigned deck_cost = get_deck_cost(cur_deck);
 	fund = std::max(fund, deck_cost);
-	print_deck_inline(deck_cost, best_score, cur_deck);
+	print_deck_inline(deck_cost, best_score, cur_deck,true);
 	std::mt19937& re = proc.threads_data[0]->re;
 	unsigned cur_gap = check_requirement(cur_deck, requirement
 #ifndef NQUEST
@@ -483,17 +498,21 @@ FinalResults<long double> simulated_annealing(unsigned num_min_iterations, unsig
 	for (auto evaluation: evaluated_decks)
 	{ simulations += evaluation.second.second; }
 	std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
-	std::cout << "Optimized Deck: ";
-	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck);
-	print_upgraded_cards(best_deck);
 	print_sim_card_values(best_deck,proc,num_iterations);
-	return best_score;
+	std::cout << "Optimized Deck: ";
+	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck,true);
+	print_upgraded_cards(best_deck);
+	return std::make_pair(best_deck->clone(),best_score);
 }
 
 
 
 
-void crossover(Deck* src1,Deck* src2, Deck* cur_deck, std::mt19937& re,unsigned best_gap,std::unordered_map<std::string, EvaluatedResults>& evaluated_decks)
+void crossover(Deck* src1,Deck* src2, Deck* cur_deck, std::mt19937& re,unsigned best_gap,std::unordered_map<std::string, EvaluatedResults>& evaluated_decks
+#ifndef NQUEST
+		, Quest & quest
+#endif
+)
 {
 	cur_deck->commander = std::uniform_int_distribution<unsigned>(0, 1)(re)?src1->commander:src2->commander;
 	cur_deck->alpha_dominion = std::uniform_int_distribution<unsigned>(0, 1)(re)?src1->alpha_dominion:src2->alpha_dominion;
@@ -529,7 +548,11 @@ void crossover(Deck* src1,Deck* src2, Deck* cur_deck, std::mt19937& re,unsigned 
 	if(!finished) copy_deck(std::uniform_int_distribution<unsigned>(0, 1)(re)?src1:src2,cur_deck);
 }
 
-void mutate(Deck* src, Deck* cur_deck, std::vector<const Card*> all_candidates, std::mt19937& re,unsigned best_gap,std::unordered_map<std::string, EvaluatedResults>& evaluated_decks)
+void mutate(Deck* src, Deck* cur_deck, std::vector<const Card*> all_candidates, std::mt19937& re,unsigned best_gap,std::unordered_map<std::string, EvaluatedResults>& evaluated_decks
+#ifndef NQUEST
+		, Quest & quest
+#endif
+)
 {
 	copy_deck(src,cur_deck);
 
@@ -600,7 +623,7 @@ void mutate(Deck* src, Deck* cur_deck, std::vector<const Card*> all_candidates, 
 	}
 	if(!finished) copy_deck(src,cur_deck);
 }
-FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
+DeckResults genetic_algorithm(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
 #ifndef NQUEST
 		, Quest & quest
 #endif
@@ -634,7 +657,7 @@ FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigne
 
 	unsigned deck_cost = get_deck_cost(cur_deck);
 	fund = std::max(fund, deck_cost);
-	print_deck_inline(deck_cost, best_score, cur_deck);
+	print_deck_inline(deck_cost, best_score, cur_deck,true);
 	std::mt19937& re = proc.threads_data[0]->re;
 	unsigned cur_gap = check_requirement(cur_deck, requirement
 #ifndef NQUEST
@@ -690,11 +713,19 @@ FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigne
 		Deck* nxt = your_decks[j]->clone();
 		if(std::uniform_int_distribution<unsigned>(0,1)(re))
 		{
-			mutate(your_decks[i],nxt,all_candidates,re,best_gap,evaluated_decks);
+			mutate(your_decks[i],nxt,all_candidates,re,best_gap,evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+            );
 		}
 		else
 		{
-			crossover(your_decks[i],your_decks[j],nxt,re,best_gap,evaluated_decks);
+			crossover(your_decks[i],your_decks[j],nxt,re,best_gap,evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+            );
 		}
 		your_decks.push_back(nxt);
 	}
@@ -735,7 +766,11 @@ FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigne
 			unsigned k = -1;
 			while (k >= pool_size-pool_mutate)
 				k=std::geometric_distribution<unsigned>(0.2)(re); //prefer crossover with strong decks
-			crossover(pool[i].first,pool[k].first,pool[j].first,re,best_gap, evaluated_decks);
+			crossover(pool[i].first,pool[k].first,pool[j].first,re,best_gap, evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+            );
 			//crossover(pool[it+pool_size/4*2].first,pool[it+pool_size/4*3].first,pool[it+pool_size/4*3].first,re,best_gap, evaluated_decks);
 			//crossover(pool[it].first,pool[(it+pool_size/8)%(pool_size/4)].first,pool[it+pool_size/4*2].first,re,best_gap, evaluated_decks);
 			//mutate(pool[it].first,pool[it+pool_size/4*3].first,all_candidates,re,best_gap, evaluated_decks);
@@ -745,16 +780,24 @@ FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigne
 		{
 			unsigned i = std::uniform_int_distribution<unsigned>(0,pool_keep-1)(re);
 			//unsigned j = std::uniform_int_distribution<unsigned>(pool_keep,pool_size-1)(re);
-			mutate(pool[i].first,pool[it].first,all_candidates,re,best_gap, evaluated_decks);
+			mutate(pool[i].first,pool[it].first,all_candidates,re,best_gap, evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+            );
 		}
 		//mutate duplicates
 		for ( unsigned it = 0; it < pool_size;it++)
 		{
 			for (unsigned i = it+1; i < pool_size;i++)
 			{
-				if(pool[it].first->hash().substr(8)==pool[i].first->hash().substr(8)) //ignore commander + dominion
+				if(pool[it].first->alpha_dominion && pool[i].first->alpha_dominion && pool[it].first->hash().substr(8)==pool[i].first->hash().substr(8)) //ignore commander + dominion
 				{
-					mutate(pool[i].first->clone(),pool[i].first,all_candidates,re,best_gap, evaluated_decks);
+					mutate(pool[i].first->clone(),pool[i].first,all_candidates,re,best_gap, evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+                    );
 
 					FinalResults<long double> nil{0, 0, 0, 0, 0, 0, 1};
 					pool[i].second = nil; //lowest score approx Null
@@ -813,11 +856,11 @@ FinalResults<long double> genetic_algorithm(unsigned num_min_iterations, unsigne
 	for (auto evaluation: evaluated_decks)
 	{ simulations += evaluation.second.second; }
 	std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
-	std::cout << "Optimized Deck: ";
-	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck);
-	print_upgraded_cards(best_deck);
 	print_sim_card_values(best_deck,proc,num_iterations);
-	return best_score;
+	std::cout << "Optimized Deck: ";
+	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck,true);
+	print_upgraded_cards(best_deck);
+	return std::make_pair(best_deck->clone(),best_score);
 }
 
 
@@ -881,7 +924,7 @@ void recursion(unsigned num_iterations, std::vector<unsigned> used, unsigned poo
 	}
 }
 
-FinalResults<long double> forts_climbing(unsigned num_iterations, Process& proc) {
+DeckResults forts_climbing(unsigned num_iterations, Process& proc) {
 	EvaluatedResults zero_results = { EvaluatedResults::first_type(proc.enemy_decks.size()*proc.your_decks.size()), 0 };
 	unsigned pool = std::get<0>(proc.your_decks[0]->variable_forts[0]);
 	std::vector<const Card*> forts(std::get<2>(proc.your_decks[0]->variable_forts[0]));
@@ -902,7 +945,11 @@ FinalResults<long double> forts_climbing(unsigned num_iterations, Process& proc)
 	std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
 	std::cout << "Optimized Deck: ";
 	print_cards_inline(best_forts);
-	return best_score;
+	Deck* tmp = proc.your_decks[0]->clone();
+	tmp->commander = nullptr;
+	tmp->alpha_dominion = nullptr;
+	tmp->cards = best_forts; // return forts
+	return std::make_pair(tmp,best_score);
 }
 
 inline bool contains(std::multimap<FinalResults<long double>, Deck*, std::greater<FinalResults<long double>>> best,Deck* d)
@@ -930,7 +977,7 @@ inline void check_and_update(std::multimap<FinalResults<long double>, Deck*, std
 	}
 }
 
-FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
+DeckResults beam_climb(unsigned num_min_iterations, unsigned num_iterations, std::vector<Deck*> your_decks, Process& proc, Requirement & requirement
 #ifndef NQUEST
 		, Quest & quest
 #endif
@@ -957,7 +1004,7 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 
 	unsigned deck_cost = get_deck_cost(cur_deck);
 	fund = std::max(fund, deck_cost);
-	print_deck_inline(deck_cost, best_score, cur_deck);
+	print_deck_inline(deck_cost, best_score, cur_deck,true);
 	std::mt19937& re = proc.threads_data[0]->re;
 	unsigned cur_gap = check_requirement(cur_deck, requirement
 #ifndef NQUEST
@@ -1031,7 +1078,11 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 		unsigned j = std::uniform_int_distribution<unsigned>(0,your_decks.size()-1)(re);
 		unsigned i = std::uniform_int_distribution<unsigned>(0,your_decks.size()-1)(re);
 		Deck* nxt = your_decks[j]->clone();
-		mutate(your_decks[i],nxt,card_candidates,re,cur_gap,evaluated_decks); //no crossovers here only fill with mutations
+		mutate(your_decks[i],nxt,card_candidates,re,cur_gap,evaluated_decks
+#ifndef NQUEST
+					, quest
+#endif
+        ); //no crossovers here only fill with mutations
 		copy_deck(nxt,cur_deck);
 		auto tscore = fitness(cur_deck,nil,evaluated_decks,zero_results,skipped_simulations,proc);
 		if(!contains(best,nxt)){best.insert(std::make_pair(tscore,nxt));}
@@ -1093,7 +1144,11 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 				//std::cout << "TRY CMD" << std::endl;
 				if(try_improve_deck(cur_deck, -1, -1, commander_candidate,
 						best_deck->commander, best_deck->alpha_dominion, best_deck->cards, best_score, cur_gap, best_hash,
-						evaluated_decks, zero_results, skipped_simulations, proc,false))
+						evaluated_decks, zero_results, skipped_simulations, proc,false
+#ifndef NQUEST
+			, quest
+#endif
+                        ))
 						{
 								check_and_update(best,cur_deck,deck_has_been_improved,best_score);
 						}
@@ -1113,7 +1168,11 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 				{ continue; }
 				if(try_improve_deck(cur_deck, -1, -1, alpha_dominion_candidate,
 						best_deck->commander, best_deck->alpha_dominion, best_deck->cards, best_score, cur_gap, best_hash,
-						evaluated_decks, zero_results, skipped_simulations, proc,false))
+						evaluated_decks, zero_results, skipped_simulations, proc,false
+#ifndef NQUEST
+			, quest
+#endif
+                        ))
 						{
 								check_and_update(best,cur_deck,deck_has_been_improved,best_score);
 						}
@@ -1143,7 +1202,11 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 				//print_deck_inline(get_deck_cost(best_deck),best_score,best_deck);
 				if(try_improve_deck(cur_deck, from_slot, to_slot, card_candidate,
 						best_deck->commander, best_deck->alpha_dominion, best_deck->cards, best_score, cur_gap, best_hash,
-						evaluated_decks, zero_results, skipped_simulations, proc,false))
+						evaluated_decks, zero_results, skipped_simulations, proc,false
+#ifndef NQUEST
+			, quest
+#endif
+                        ))
 						{
 								check_and_update(best,cur_deck,deck_has_been_improved,best_score);
 						}
@@ -1163,9 +1226,9 @@ FinalResults<long double> beam_climb(unsigned num_min_iterations, unsigned num_i
 	for (auto evaluation: evaluated_decks)
 	{ simulations += evaluation.second.second; }
 	std::cout << "Evaluated " << evaluated_decks.size() << " decks (" << simulations << " + " << skipped_simulations << " simulations)." << std::endl;
-	std::cout << "Optimized Deck: ";
-	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck);
-	print_upgraded_cards(best_deck);
 	print_sim_card_values(best_deck,proc,num_iterations);
-	return best_score;
+	std::cout << "Optimized Deck: ";
+	print_deck_inline(get_deck_cost(best_deck), best_score, best_deck,true);
+	print_upgraded_cards(best_deck);
+	return std::make_pair(best_deck->clone(),best_score);
 }

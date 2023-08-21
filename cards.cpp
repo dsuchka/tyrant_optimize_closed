@@ -49,7 +49,7 @@ const Card* Cards::by_id(unsigned id) const
     const auto cardIter = cards_by_id.find(id);
     if (cardIter == cards_by_id.end())
     {
-        throw std::runtime_error("No card with id " + to_string(id));
+        throw std::runtime_error("No card with id " + tuo::to_string(id));
     }
     else
     {
@@ -86,11 +86,11 @@ void Cards::organize()
         std::string base_name = card->m_name;
         if (card == card->m_top_level_card)
         {
-            add_card(card, card->m_name + "-" + to_string(card->m_level));
+            add_card(card, card->m_name + "-" + tuo::to_string(card->m_level));
         }
         else
         {
-            card->m_name += "-" + to_string(card->m_level);
+            card->m_name += "-" + tuo::to_string(card->m_level);
         }
         add_card(card, card->m_name);
     }

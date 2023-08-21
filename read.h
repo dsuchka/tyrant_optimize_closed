@@ -22,17 +22,18 @@ unsigned read_card_abbrs(Cards& cards, const std::string& filename);
 unsigned read_bge_aliases(std::unordered_map<std::string, std::string> & bge_aliases, const std::string & filename);
 std::unordered_map<unsigned, unsigned> read_custom_cards(Cards& all_cards, const std::string& filename, bool abort_on_missing);
 
+namespace tuo {
 // trim from start
 static inline std::string &ltrim(std::string &s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),[](int c) {return !std::isspace(c);}));
     return s;
 }
 
 // trim from end
 static inline std::string &rtrim(std::string &s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](int c) {return !std::isspace(c);}).base(), s.end());
     return s;
 }
 
@@ -41,7 +42,7 @@ static inline std::string &trim(std::string &s)
 {
     return ltrim(rtrim(s));
 }
-
+}
 // is line should be skipped?
 static inline bool is_line_empty_or_commented(std::string &s)
 {

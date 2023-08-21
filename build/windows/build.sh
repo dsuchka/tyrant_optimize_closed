@@ -3,7 +3,7 @@
 set -xue
 
 #Linux Build
-make all
+#make all
 MXE_DIR=/usr/lib/mxe
 
 
@@ -40,7 +40,7 @@ if [ "$omp" = "-openmp" ]; then
 DFLAGS="${DFLAGS} -DUSE_OPENMP=ON"
 fi
 #prep cmake
-${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -B${BDIR} -DVERSION:STRING="${TRAVIS_TAG}${bit}${omp}${dbg}"  ${DFLAGS}
+${MXE_DIR}/usr/bin/${MXE_TARGET}-cmake . -B${BDIR} -DVERSION:STRING="$(git describe --tags --abbrev=0 --dirty)${bit}${omp}${dbg}"  ${DFLAGS}
 
 #cmake sets dndebug by default => remove that
 if [ "$dbg" = "-debug" ]; then

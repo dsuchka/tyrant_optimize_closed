@@ -39,6 +39,4 @@ rule/enemy-based order
 state-attacking += state-skills-active
 OpenACC, OpenMP, MPI, OpenGL, CUDA support?
 Neuronal Network/Maschine Learning playing order (== flex).
-Annealex => scale anneal iterations with temperature
 Continous Mode to avoid reloading XMLs when used by an external prog.
-separate climb/sim from loading/init in tyrant_optimize.cpp

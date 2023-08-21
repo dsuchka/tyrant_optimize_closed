@@ -21,6 +21,13 @@ enum Fix
     revenge_on_death,
     death_from_bge,
     legion_under_mega,
+    barrier_each_turn,
+    dont_evade_mimic_selection,
+    leech_increase_max_hp,
+    counter_without_damage,
+    subdue_before_attack,
+    corrosive_protect_armor,
+    poison_after_attacked,
     num_fixes
 };
 
@@ -313,7 +320,13 @@ inline void map_keys_to_set(const std::unordered_map<unsigned, unsigned>& m, std
         s.insert(it->first);
     }
 }
-
+/**
+ * @brief Subtract two unsigned integers, but return 0 if the result would be negative.
+ * 
+ * @param x value to subtract from
+ * @param y value to subtract
+ * @return unsigned result of subtraction, or 0 if the result would be negative
+ */
 inline unsigned safe_minus(unsigned x, unsigned y)
 {
     return (x > y) ? (x - y) : 0;
@@ -386,7 +399,7 @@ enum QuestType
 }
 #endif
 
-enum class OptimizationMode
+enum OptimizationMode
 {
     notset,
     winrate,
@@ -426,6 +439,7 @@ using SkillSpecXMult = _SkillSpec<double>;
 
 // --------------------------------------------------------------------------------
 // Common functions
+namespace tuo {
 template<typename T>
 std::string to_string(const T val)
 {
@@ -433,7 +447,7 @@ std::string to_string(const T val)
     s << val;
     return s.str();
 }
-
+}
 inline uint8_t byte_bits_count(uint8_t i)
 {
     i = i - ((i >> 1) & 0x55);

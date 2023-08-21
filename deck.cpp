@@ -368,10 +368,9 @@ void Deck::add_dominion(const Card* dom_card, bool override_dom)
 	}
 }
 
-std::string Deck::hash() const
+std::vector<const Card*> Deck::sorted_ids() const
 {
-	std::stringstream ios;
-	std::vector<const Card*> deck_all_cards;
+    std::vector<const Card*> deck_all_cards;
 	deck_all_cards.emplace_back(commander);
 	if (alpha_dominion) { deck_all_cards.emplace_back(alpha_dominion); }
 	deck_all_cards.insert(deck_all_cards.end(), cards.begin(), cards.end());
@@ -379,7 +378,13 @@ std::string Deck::hash() const
 	{
 		std::sort(deck_all_cards.end() - cards.size(), deck_all_cards.end(), [](const Card* a, const Card* b) { return a->m_id < b->m_id; });
 	}
-	encode_deck(ios, deck_all_cards);
+    return deck_all_cards;
+}
+
+std::string Deck::hash() const
+{
+	std::stringstream ios;
+	encode_deck(ios, sorted_ids());
 	return ios.str();
 }
 

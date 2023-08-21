@@ -3,13 +3,13 @@
 curr_dir=$(dirname "$0")
 olds_dir="$curr_dir/old-xmls.d"
 
-#BASE_URL="http://mobile.tyrantonline.com/assets/"
-BASE_URL="http://mobile-dev.tyrantonline.com/assets/"
+#BASE_URL="https://mobile.tyrantonline.com/assets/"
+BASE_URL="https://mobile-dev.tyrantonline.com/assets/"
 FILES=(
    fusion_recipes_cj2.xml
    missions.xml
    skills_set.xml
-   cards_section_{1..20}.xml
+   cards_section_{1..21}.xml
    items.xml
    levels.xml
    codex.xml
@@ -37,7 +37,7 @@ for f in "${FILES[@]}"; do
     old_etag=$(cat "${etg_file}" 2>/dev/null)
     new_etag=$(
         curl -X HEAD "${BASE_URL}${f}" --silent &>/dev/null \
-            -D >(tr -d '\r' | grep --color=never -P -o '(?<=^ETag: ).*$' > /dev/stdout) \
+            -D >(tr -d '\r' | grep --color=never -P -o -i '(?<=^ETag: ).*$' > /dev/stdout) \
             -H "Connection: close" --ignore-content-length
     )
     echo

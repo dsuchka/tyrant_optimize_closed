@@ -27,10 +27,13 @@ test:
 
 debug:
 		$(MAKE) -f make/Makefile-debug.${OS} all
-
-ahk: SimpleTUOptimizeStarter.ahk
-		$(AHK2EXE) //in SimpleTUOptimizeStarter.ahk //out SimpleTUOptimizeStarter.exe
-		$(AHK2EXE) //in SimpleTUOptimizeStarter.ahk //out SimpleTUOptimizeStarter-x86.exe //bin $(AHK32BIT)
+ahk: starterahk livesimahk
+livesimahk: SimpleTUOLiveSim.ahk
+		$(AHK2EXE) /in SimpleTUOLiveSim.ahk /out SimpleTUOLiveSim.exe
+		$(AHK2EXE) /in SimpleTUOLiveSim.ahk /out SimpleTUOLiveSim-x86.exe /bin $(AHK32BIT)
+starterahk: SimpleTUOptimizeStarter.ahk
+		$(AHK2EXE) /in SimpleTUOptimizeStarter.ahk /out SimpleTUOptimizeStarter.exe
+		$(AHK2EXE) /in SimpleTUOptimizeStarter.ahk /out SimpleTUOptimizeStarter-x86.exe /bin $(AHK32BIT)
 clean:
 		$(MAKE) -f make/Makefile.${OS} clean
 		$(MAKE) -f make/Makefile-debug.${OS} clean

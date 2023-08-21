@@ -39,6 +39,8 @@ void hash_to_ids_ext_b64(const char* hash, std::vector<unsigned>& ids);
 void encode_deck_ext_b64(std::stringstream &ios, std::vector<const Card*> cards);
 void hash_to_ids_ddd_b64(const char* hash, std::vector<unsigned>& ids);
 void encode_deck_ddd_b64(std::stringstream &ios, std::vector<const Card*> cards);
+
+void encode_id_ext_b64(std::stringstream &ios, unsigned card_id);
 extern DeckDecoder hash_to_ids;
 extern DeckEncoder encode_deck;
 
@@ -143,6 +145,7 @@ public:
     void add_dominion(const Card* dom_card, bool override_dom);
 
     Deck* clone() const;
+    std::vector<const Card*> sorted_ids() const;
     std::string hash() const;
     std::string short_description() const;
     std::string medium_description() const;

@@ -2,6 +2,7 @@
 #SingleInstance off
 SendMode Input  ; Recommended for new scripts due to its superior speed and reliability.
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
+FileCreateDir, %A_ScriptDir%\data
 
 VersionOfStarter := "v2.64.0"
 

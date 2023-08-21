@@ -2,6 +2,7 @@ obj/**
 obj-debug/**
 obj-test/**
 data/ownedcards_*.txt
+data/database.yml
 data/customdecks_*.txt
 data/*.etg
 data/cards_section_*.xml
@@ -38,3 +39,19 @@ tuo-x86-debug.exe
 tuo-x86.exe
 tuo-test.exe
 tuo-x86-test.exe
+.cproject
+test.tuo
+.project
+.settings/
+tets.tuo
+params/
+cmake_install.cmake
+CMakeFiles
+CMakeCache.txt
+.vscode
+
+ml/dist
+ml/tuo_ml/__pycache__
+ml/tuo_ml/*.pmml
+
+database.yml

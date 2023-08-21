@@ -310,7 +310,7 @@ unsigned read_card_abbrs(Cards& all_cards, const std::string& filename)
         {
             std::string abbr_string;
             getline(abbr_file, abbr_string);
-            trim(abbr_string);
+            tuo::trim(abbr_string);
             ++num_line;
             if (is_line_empty_or_commented(abbr_string))
             { continue; }
@@ -363,13 +363,14 @@ std::unordered_map<unsigned, unsigned> read_custom_cards(Cards& all_cards, const
     }
     unsigned num_line(0);
     cards_file.exceptions(std::ifstream::badbit);
-    try
+    
+    while(cards_file && !cards_file.eof())
     {
-        while(cards_file && !cards_file.eof())
-        {
+	try
+    	{
             std::string card_spec;
             getline(cards_file, card_spec);
-            trim(card_spec);
+            tuo::trim(card_spec);
             ++num_line;
             if (is_line_empty_or_commented(card_spec))
             { continue; }
@@ -379,23 +380,23 @@ std::unordered_map<unsigned, unsigned> read_custom_cards(Cards& all_cards, const
             char mark{0};
             parse_card_spec(all_cards, card_spec, card_id, card_num, num_sign, mark);
             cards[card_id] = card_num;
-        }
-    }
-    catch (std::exception& e)
-    {
-        if (abort_on_missing)
-        {
-            throw e;
-        }
-        else
-        {
-            std::cerr << "Exception while parsing the custom cards file " << filename;
-            if (num_line > 0)
-            {
-                std::cerr << " at line " << num_line;
-            }
-            std::cerr << ": " << e.what() << ".\n";
-        }
+    	}
+    	catch (std::exception& e)
+    	{
+    	    if (abort_on_missing)
+    	    {
+    	        throw e;
+    	    }
+    	    else
+    	    {
+    	        std::cerr << "Exception while parsing the custom cards file " << filename;
+    	        if (num_line > 0)
+    	        {
+    	            std::cerr << " at line " << num_line;
+    	        }
+    	        std::cerr << ": " << e.what() << ".\n";
+    	    }
+    	}
     }
     return cards;
 }
@@ -424,7 +425,7 @@ unsigned load_custom_decks(Decks& decks, Cards& all_cards, const std::string & f
         {
             std::string deck_string;
             getline(decks_file, deck_string);
-            trim(deck_string);
+            tuo::trim(deck_string);
             ++num_line;
             if (is_line_empty_or_commented(deck_string))
             { continue; }
@@ -515,7 +516,7 @@ void read_owned_cards(Cards& all_cards, std::map<unsigned, unsigned>& owned_card
     {
         std::string card_spec;
         getline(owned_file, card_spec);
-        trim(card_spec);
+        tuo::trim(card_spec);
         ++num_line;
         if (is_line_empty_or_commented(card_spec))
         { continue; }
