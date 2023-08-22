@@ -516,17 +516,11 @@ class TUApiClient:
         txt += '\n// End of decks dump\n'
         return txt
 
-    def getCardsText(self, card_id2name_resolver = getCardNameById):
-        if not self.lastUserCards:
-            return None
-        txt = '// Cards of user "{}" (without buyback)\n'.format(self.getUserName())
+    def getCardsText0(self, data, number_field, card_id2name_resolver = getCardNameById):
+        txt = ''
         factions = [1, 2, 3, 4, 5, 6]
         rarities = [6, 5, 4, 3]
         f_r_cards = {}
-        def _get_attr(d, name, typ=str):
-            if name not in d or d[name] is None:
-                return None
-            return typ(d[name])
         def _set_f_r_cards(c_id, count):
             if c_id not in id_to_cards:
                 raise Exception('No such card: id=' + str(c_id))
@@ -538,9 +532,9 @@ class TUApiClient:
             if r not in f_r_cards[f]:
                 f_r_cards[f][r] = {}
             f_r_cards[f][r][c_id] = count
-        for c_id, c_obj in self.lastUserCards.items():
+        for c_id, c_obj in data.items():
             c_id = int(c_id)
-            count = int('num_owned' in c_obj and c_obj['num_owned'] or 0)
+            count = int(number_field in c_obj and c_obj[number_field] or 0)
             if count:
                 _set_f_r_cards(c_id, count)
         for f in factions:
@@ -553,9 +547,22 @@ class TUApiClient:
                 txt += '// ++ (( {} )) ++\n'.format(getRarityName(r))
                 for c_id, count in f_r_cards[f][r].items():
                     txt += card_id2name_resolver(c_id)
-                    if count > 1:
-                        txt += ' #' + str(count)
+                    txt += ' (+' + str(count) + ')'
                     txt += '\n'
+        return txt
+
+    def getBuybackText(self, card_id2name_resolver = getCardNameById):
+        if not self.lastBuybackData:
+            return None
+        txt = '// Buyback cards of user "{}"\n'.format(self.getUserName())
+        txt += self.getCardsText0(self.lastBuybackData, 'number', card_id2name_resolver)
+        return txt
+
+    def getCardsText(self, card_id2name_resolver = getCardNameById):
+        if not self.lastUserCards:
+            return None
+        txt = '// Cards of user "{}" (without buyback)\n'.format(self.getUserName())
+        txt += self.getCardsText0(self.lastUserCards, 'num_owned', card_id2name_resolver)
         return txt
 
 def doHuntAndEnrichUserDb(client):
@@ -848,6 +855,11 @@ with PoolManager(1,
                     traceback.print_exc()
                 continue
             if args[1] == 'buyback':
-                # TODO
+                try:
+                    write_dump(client.getBuybackText())
+                except Exception as e:
+                    print('could not dump cards: {}'.format(e))
+                    import traceback
+                    traceback.print_exc()
                 continue
         print('ERROR: unknown command: {} (supported: [ grab | hunt | dump | exit ])'.format(line))
