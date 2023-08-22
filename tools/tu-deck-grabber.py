@@ -28,6 +28,7 @@ DEFAULT_USER_DB_PATH = '~/.tu-deck-grabber.udb'
 DEFAULT_CONFIG_PATH = '~/.tu-deck-grabber.ini'
 
 TUC_VERSION = 'tuc v1.1'
+TUF_VERSION = 'tuf v1.1'
 
 #PROTOCOL = 'http'
 #API_HOST = 'localhost:8000'
@@ -169,6 +170,8 @@ if os.path.exists(udb_fname):
         print('INFO: user-db(total {} entries) loaded from dump: {}'.format(user_db.size(), udb_fname))
 
 id_to_cards = {}
+fusion_from_cards = {}
+fusion_into_cards = {}
 
 faction_id_to_name_scname_tuple = {
     1: ('Imperial', 'im'),
@@ -252,6 +255,63 @@ def formatUnitSkill(skill):
         fmt += ' [card "{}"]'.format(getCardNameById(int(skill['card_id'])))
     return fmt
 
+# fusions
+xml_fname = os.path.join(os.path.expanduser(XML_DIR), 'fusion_recipes_cj2.xml')
+while os.path.exists(xml_fname):
+    st = os.stat(xml_fname)
+    xml_file_hash = int(st.st_mtime * 0x1b1 + st.st_size) & 0xFFFFFFFF
+    print('INFO: fusion recipes xml file: {} (hash: 0x{:08x})'.format(xml_fname, xml_file_hash))
+
+    dump_fname = re.sub('\.xml$', '.pck', xml_fname)
+    if os.path.exists(dump_fname):
+        with open(dump_fname, 'rb') as f:
+            xmagic = pickle.load(f)
+            if xmagic != TUF_VERSION:
+                print('INFO: reloading {}: old format'.format(xml_fname))
+            else:
+                xhash = pickle.load(f)
+                if xhash == xml_file_hash:
+                    fusion_from_cards.update(pickle.load(f))
+                    fusion_into_cards.update(pickle.load(f))
+                    print('INFO: image of {} loaded from dump: {}'.format(xml_fname, dump_fname))
+                    break
+                print('INFO: reloading {}: dumped hash(0x{:08x}) <> actual hash(0x{:08x})'.format(xml_fname, xhash, xml_file_hash))
+
+    xml = minidom.parse(xml_fname)
+    root = getFirstChildElementNode(xml, 'root')
+    for recp in getAllChildElementNodes(root, 'fusion_recipe'):
+        def recp_get(name, castType=None, defValue=None):
+            v = getFirstChildTextNodeValue(getFirstChildElementNode(recp, name))
+            return defValue if not v else castType(v) if castType else v
+        card_id = recp_get('card_id', int)
+        for res in getAllChildElementNodes(recp, 'resource'):
+            def recp_get_attr(attr, castType=None, defValue=None):
+                v = res.getAttributeNode(attr).value
+                return defValue if not v else castType(v) if castType else v
+            res_card_id = recp_get_attr('card_id', int)
+            count = recp_get_attr('number', int)
+
+            # id -> {resources=count}
+            if (card_id not in fusion_from_cards):
+                fusion_from_cards[card_id] = {}
+            fusion_from_cards[card_id][res_card_id] = count
+
+            # id -> [available fusions]
+            if (res_card_id not in fusion_into_cards):
+                fusion_into_cards[res_card_id] = []
+            if (card_id not in fusion_into_cards[res_card_id]):
+                fusion_into_cards[res_card_id].append(card_id)
+
+    # dump file image
+    with open(dump_fname, 'wb') as f:
+        pickle.dump(TUF_VERSION, f)
+        pickle.dump(xml_file_hash, f)
+        pickle.dump(fusion_from_cards, f)
+        pickle.dump(fusion_into_cards, f)
+        print('INFO: {} parsed & image saved to dump: {}'.format(xml_fname, dump_fname))
+    break # exit loop
+
+# cards
 for i in range(1, 100):
     xml_fname = os.path.join(os.path.expanduser(XML_DIR), 'cards_section_{}.xml'.format(i))
     if not os.path.exists(xml_fname):
@@ -268,9 +328,8 @@ for i in range(1, 100):
                 print('INFO: reloading {}: old format'.format(xml_fname))
             else:
                 xhash = pickle.load(f)
-                xmap = pickle.load(f)
                 if xhash == xml_file_hash:
-                    id_to_cards.update(xmap)
+                    id_to_cards.update(pickle.load(f))
                     print('INFO: image of {} loaded from dump: {}'.format(xml_fname, dump_fname))
                     continue
                 print('INFO: reloading {}: dumped hash(0x{:08x}) <> actual hash(0x{:08x})'.format(xml_fname, xhash, xml_file_hash))
@@ -282,6 +341,7 @@ for i in range(1, 100):
         def unit_get(name, castType=None, defValue=None, unit=unit):
             v = getFirstChildTextNodeValue(getFirstChildElementNode(unit, name))
             return defValue if not v else castType(v) if castType else v
+        cards = []
         card = {}
         card['id'] = unit_get('id', int)
         card['name'] = unit_get('name')
@@ -305,10 +365,13 @@ for i in range(1, 100):
         level_raw = unit_get('level')
         card['full_name'] = '{}-{}'.format(card['name'], card['level'])
         card['maxed'] = False
+        low_level_id = card['id']
         top_level_id = card['id']
         file_cards_by_id[top_level_id] = card
 
         card['skills'] = parseUnitSkills(unit)
+
+        cards.append(card)
 
         card_prev = card
         for upgrade in getAllChildElementNodes(unit, 'upgrade'):
@@ -321,14 +384,19 @@ for i in range(1, 100):
             card_next['hp'] = upgrade_get('health', int) or card_prev['hp']
             card_next['attack'] = upgrade_get('attack', int) or card_prev['attack']
             card_next['delay'] = upgrade_get('cost', int) or card_prev['delay']
-            card_next['full_name'] =  '{}-{}'.format(card_next['name'], card_next['level'])
+            card_next['full_name'] = '{}-{}'.format(card_next['name'], card_next['level'])
             card_next['skills'] = parseUnitSkills(upgrade) or card_prev['skills']
             top_level_id = card_next['id']
             file_cards_by_id[top_level_id] = card_next
+            cards.append(card_next)
             card_prev = card_next
 
         file_cards_by_id[top_level_id]['full_name'] = card['name']
         file_cards_by_id[top_level_id]['maxed'] = True
+
+        for card in cards:
+            card['low_id'] = low_level_id
+            card['top_id'] = top_level_id
 
     # dump file image
     with open(dump_fname, 'wb') as f:
@@ -337,6 +405,18 @@ for i in range(1, 100):
         pickle.dump(file_cards_by_id, f)
         print('INFO: {} parsed & image saved to dump: {}'.format(xml_fname, dump_fname))
     id_to_cards.update(file_cards_by_id)
+
+# apply orig_set (only for fusions with single source)
+for card in id_to_cards.values():
+    def get_orig_set(card):
+        if (not card): return None
+        if (not card['fusion']): return card['set']
+        res = fusion_from_cards.get(card['low_id'])
+        if (not res) or (len(res) != 1): return None
+        return get_orig_set(id_to_cards.get(next(iter(res.keys()))))
+    orig_set = get_orig_set(card)
+    if (orig_set):
+        card['orig_set'] = orig_set
 
 def getCardNameById(card_id):
     if card_id in id_to_cards:
@@ -785,17 +865,29 @@ with PoolManager(1,
             if len(args) < 2:
                 print('USAGE: card <ID|"NAME"|"/REGEX/">')
                 continue
-            def showCard(card):
+            def showCard(card, with_fusions=True):
                 print(' >> Card [{}] {}'.format(card['id'], card['full_name']))
-                print('    {} {} {} (set {})'.format(
+                print('    {} {} {} (set {}{})'.format(
                     getFusionName(card['fusion']),
                     getRarityName(card['rarity']),
                     getFactionName(card['faction']),
-                    card['set']
+                    card['set'],
+                    (', orig set {}'.format(card['orig_set']) if ('orig_set' in card) else '')
                 ))
                 print('    ATT {} / HP {} / CD {}'.format(card['attack'], card['hp'], card['delay']))
                 for s in card['skills']:
-                    print ('      >  ' + formatUnitSkill(s))
+                    print('      >  ' + formatUnitSkill(s))
+                if (with_fusions):
+                    f_from = fusion_from_cards.get(card['low_id'], None)
+                    f_into = fusion_into_cards.get(card['top_id'], None)
+                    if (f_from):
+                        print('    Fused from:')
+                        for f_c_id, cnt in f_from.items():
+                            print('      > card "{}" x {}'.format(getCardNameById(f_c_id), cnt))
+                    if (f_into):
+                        print('    Fuses into:')
+                        for f_c_id in f_into:
+                            print('      > card "{}"'.format(getCardNameById(f_c_id)))
             if re.match(r'^\d+$', args[1]):
                 c_id = int(args[1])
                 if c_id not in id_to_cards:
@@ -814,7 +906,7 @@ with PoolManager(1,
             continue
         if args[0] == 'dump':
             if len(args) < 2:
-                print('USAGE: dump <tuc|decks|cards|buyback> [PATH_TO_FILE]')
+                print('USAGE: dump <tuc|tuf|decks|cards|buyback> [PATH_TO_FILE]')
                 continue
             out_fname = None if len(args) < 3 else args[2]
             def write_dump(data, append = False):
@@ -837,6 +929,13 @@ with PoolManager(1,
                     write_dump(json.dumps(id_to_cards, indent=2))
                 except Exception as e:
                     print('could not dump tuc data: {}'.format(e))
+                continue
+            if args[1] == 'tuf':
+                try:
+                    m = {'from': fusion_from_cards, 'into': fusion_into_cards}
+                    write_dump(json.dumps(m, indent=2))
+                except Exception as e:
+                    print('could not dump tuf data: {}'.format(e))
                 continue
             if args[1] == 'decks':
                 try:
