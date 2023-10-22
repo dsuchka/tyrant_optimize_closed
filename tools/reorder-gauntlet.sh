@@ -39,6 +39,9 @@ TUO_OPTIONS=(
     # enemy is defender (in surge mode) / with IA(2) against MF / use valid custom BGEs!
     #ee "Divine Blessing"
     #ye "Divine Blessing"
+
+    no-db
+    no-ml
 )
 
 TMP_DIR="/tmp"

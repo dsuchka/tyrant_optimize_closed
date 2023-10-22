@@ -12,7 +12,7 @@ Combined Arms: Enhance All Coalition 10; Rally all 10; Enfeeble all 10; Strike a
 //Combined Arms: Rally all 10; Enfeeble all 10; Strike all 10
 Inspired: Rally all 25
 Blightblast: Enfeeble all 35
-Emergency Aid: Heal All 10; Protect all 10; Enhance all Absorb 125
+Emergency Aid: Enhance all Absorb 125; Heal All 10; Protect all 10
 Landmine: Entrap all 25; Weaken all 25
 Triage: Enhance all Fortify 35; Heal 25; Protect 25
 //Triage: Heal 25; Protect 25

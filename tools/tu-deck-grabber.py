@@ -666,10 +666,11 @@ def doHuntAndEnrichUserDb(client):
     if user_db._dirty:
         user_db._dirty = False
         tmp_udb_fname = udb_fname + '~'
+        old_udb_fname = udb_fname + '.old'
         with open(tmp_udb_fname, 'wb') as f:
             pickle.dump(user_db, f)
         if (os.path.exists(udb_fname)):
-            os.remove(udb_fname)
+            os.renames(udb_fname, old_udb_fname)
         os.renames(tmp_udb_fname, udb_fname)
         print('INFO: user-db: synced to disk: {} (total {} entries)'.format(udb_fname, user_db.size()))
 
@@ -847,7 +848,7 @@ with PoolManager(1,
             continue
         if args[0] == 'salvage':
             if len(args) < 2:
-                print('USAGE: salvage <CARD_ID|commons|rares> [CARD_ID:COUNT]')
+                print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
                 continue
             if args[1] == 'commons':
                 rsp = client.salvageL1CommonCards()

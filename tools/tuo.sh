@@ -38,6 +38,9 @@ if (( ! found_ownedcards )) && (( TUO_RESTRICT_OWNEDCARDS )); then
     ARGS+=("-o=${TUO_ROOT}/data/ownedcards_${TUO_LOGIN}.txt")
 fi
 
+## ignore db/ml
+ARGS+=(no-db no-ml)
+
 ## append globally exported tuo flags
 ARGS+=($TUO_FLAGS)
 
