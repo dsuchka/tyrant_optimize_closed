@@ -321,7 +321,7 @@ void parse_card_node(Cards& all_cards, Card* card, xml_node<>* card_node)
         auto c = node_value(skill_node, "c", skill_id==Skill::flurry?1:0);
         auto s = skill_target_skill(skill_node, "s");
         auto s2 = skill_target_skill(skill_node, "s2");
-        bool all = skill_node->first_attribute("all");
+        bool all = node_value(skill_node, "all", 0);
         auto card_id = node_value(skill_node, "card_id", 0);
 	//scaling
 	if(abs(1-x_skill_scale[Skill::no_skill]*x_skill_scale[skill_id==Skill::enhance?s:skill_id])>eps)
@@ -502,7 +502,7 @@ Deck* read_deck(Decks& decks, const Cards& all_cards, xml_node<>* node, DeckType
             auto c = node_value(skill_node, "c", 0);
             auto s = skill_target_skill(skill_node, "s");
             auto s2 = skill_target_skill(skill_node, "s2");
-            bool all(skill_node->first_attribute("all"));
+            bool all(node_value(skill_node, "all", 0));
             effects.push_back({skill_id, x, y, n, c, s, s2, all});
         }
     }
