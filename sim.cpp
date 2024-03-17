@@ -3154,9 +3154,7 @@ void perform_targetted_allied_fast(Field* fd, CardStatus* src, const SkillSpec& 
     bool has_counted_quest = false;
 #endif
     bool src_overloaded = src->m_overloaded;
-    unsigned selection_array_len = fd->selection_array.size();
-    CardStatus * selection_array[selection_array_len];
-    std::memcpy(selection_array, &fd->selection_array[0], selection_array_len * sizeof(CardStatus *));
+    std::vector<CardStatus*> selection_array = fd->selection_array;
     for (CardStatus * dst: selection_array)
     {
         if (dst->m_inhibited > 0 && !src_overloaded)
@@ -3186,8 +3184,7 @@ void perform_targetted_allied_fast(Field* fd, CardStatus* src, const SkillSpec& 
         for (unsigned i = 0; i < num_inhibited; ++ i)
         {
             select_targets<skill_id>(fd, &fd->tip->commander, diverted_ss);
-            selection_array_len = fd->selection_array.size();
-            std::memcpy(selection_array, &fd->selection_array[0], selection_array_len * sizeof(CardStatus *));
+            std::vector<CardStatus*> selection_array = fd->selection_array;
             for (CardStatus * dst: selection_array)
             {
                 if (dst->m_inhibited > 0)
@@ -3237,8 +3234,7 @@ void perform_targetted_hostile_fast(Field* fd, CardStatus* src, const SkillSpec&
 
     // apply skill to each target(dst)
     unsigned selection_array_len = fd->selection_array.size();
-    CardStatus * selection_array[selection_array_len];
-    std::memcpy(selection_array, &fd->selection_array[0], selection_array_len * sizeof(CardStatus *));
+    std::vector<CardStatus*> selection_array = fd->selection_array;
     for (CardStatus * dst: selection_array)
     {
         // TurningTides
@@ -3882,9 +3878,7 @@ Results<uint64_t> play(Field* fd,bool skip_init, bool skip_preplay,unsigned turn
                         // for (unsigned i = 0; i < num_inhibited; ++ i)
                         {
                             select_targets<Skill::protect>(fd, &fd->tip->commander, diverted_ss);
-                            unsigned selection_array_len = fd->selection_array.size();
-                            CardStatus * selection_array[selection_array_len];
-                            std::memcpy(selection_array, &fd->selection_array[0], selection_array_len * sizeof(CardStatus *));
+                            std::vector<CardStatus*> selection_array = fd->selection_array;
                             for (CardStatus * dst: selection_array)
                             {
                                 if (dst->m_inhibited > 0)

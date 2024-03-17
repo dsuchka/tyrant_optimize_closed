@@ -14,7 +14,13 @@
 // #define NDEBUG
 #define BOOST_THREAD_USE_LIB
 
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include <io.h>
+#define F_OK 0
+#define access(f, m) _access((f), (m))
+#endif
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -2530,6 +2536,8 @@ DeckResults run(int argc, const char **argv)
 
     for (int argIndex = 3; argIndex < argc; ++argIndex)
     {
+        //bypass MSVS issue: Nesting of code blocks exceeds the limit of 128 nesting levels
+        bool tokenParsed = true;
         if (strcmp(argv[argIndex], "deck") == 0)
         {
             your_deck_list = std::string(argv[argIndex + 1]);
@@ -3255,7 +3263,14 @@ DeckResults run(int argc, const char **argv)
             opt_multi_optimization = true;
             argIndex += 3;
         }
-        else if (strcmp(argv[argIndex], "genetic") == 0)
+        else {
+            tokenParsed = false;
+        }
+        
+        if (!tokenParsed)
+        {
+        //no indent: keep two parts of a nested if at the same level
+        if (strcmp(argv[argIndex], "genetic") == 0)
         {
             if (check_input_amount(argc, argv, argIndex, 1))
                 exit(1);
@@ -3454,6 +3469,7 @@ DeckResults run(int argc, const char **argv)
             std::cerr << "Error: Unknown option " << argv[argIndex] << std::endl;
             exit(1);
         }
+        } // if (tokenParsed)
     }
     load_db(prefix);
     load_ml(prefix);

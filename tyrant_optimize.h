@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "deck.h"
 #include <boost/thread/barrier.hpp>
 #include <boost/thread/mutex.hpp>
