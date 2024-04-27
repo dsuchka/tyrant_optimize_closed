@@ -515,7 +515,7 @@ extern "C" JNIEXPORT void
     public:
         enum
         {
-            bufsize = 256
+            bufsize = 512
         }; // ... or some other suitable buffer size
         androidbuf() { this->setp(buffer, buffer + bufsize - 1); }
 
@@ -527,32 +527,39 @@ extern "C" JNIEXPORT void
                 *this->pptr() = traits_type::to_char_type(c);
                 this->sbumpc();
             }
-            return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
+            sync_me(c);
+            return traits_type::not_eof(c);
         }
-        int sync()
-        {
-            int rc = 0;
+
+        void sync_me(int overflow=0) {
             if (this->pbase() != this->pptr())
             {
-                auto sss = std::string(this->pbase(),
-                                       this->pptr() - this->pbase())
-                               .c_str();
+                char writebuf[bufsize+2];
+                memcpy(writebuf, this->pbase(), this->pptr() - this->pbase() );
+                writebuf[this->pptr() - this->pbase() ] = overflow;
+                writebuf[this->pptr() - this->pbase() + 1 ] = '\0';
+                //auto sss = std::string(writebuf).c_str();
+                ///*
                 __android_log_print(ANDROID_LOG_DEBUG,
                                     "TUO_TUO",
                                     "%s",
-                                    sss);
-                jstring jstr = envv->NewStringUTF(sss);
+                                    writebuf);
+                //*/
+                jstring jstr = envv->NewStringUTF(writebuf);
                 jclass clazz = envv->FindClass("de/neuwirthinformatik/alexander/mtuo/TUO");
                 jmethodID messageMe = envv->GetMethodID(clazz, "output", "(Ljava/lang/String;)V");
                 envv->CallVoidMethod(objv, messageMe, jstr);
-                rc = 0;
                 this->setp(buffer, buffer + bufsize - 1);
             }
-            return rc;
+        }
+
+        int sync()
+        {
+            sync_me(0);
+            return 0;
         }
         char buffer[bufsize];
     };
-    // TODO should these news be deleted at some point?
     auto ao = new androidbuf();
     auto ae = new androidbuf();
     std::cout.rdbuf(ao);
