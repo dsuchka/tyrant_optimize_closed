@@ -228,7 +228,7 @@ def parseUnitSkills(root):
         skill = {}
         for x in ('id', 'x', 'y', 'all', 'trigger', 'n', 'c', 's', 'card_id'):
             v = skill_node.getAttributeNode(x)
-            if v:
+            if v and (v.value != '0'):
                 skill[x] = v.value
         if 'id' not in skill:
             raise Exception('skill without id: {}'.format(skill))
@@ -452,7 +452,7 @@ class TUApiRequestData:
         if api_stat_name:
             self.body_params.update({
                 'api_stat_name': api_stat_name,
-                'api_stat_time': str(randint(22,777)),
+                'api_stat_time': str(randint(222,7777)),
             })
         self.body_params.update({
             'data_usage': str(randint(11111, 888888)),
@@ -561,6 +561,14 @@ class TUApiClient:
 
     def salvageL1RareCards(self):
         rd = self.__mkRequestData('salvageL1RareCards', {})
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def buyGold20x(self):
+        rd = self.__mkRequestData('buyStorePromoGold', {
+            'expected_cost': '2000',
+            'item_id': '48',
+            'item_type': '3',
+        })
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
     def getDecksText(self, card_id2name_resolver = getCardNameById):
@@ -861,6 +869,43 @@ with PoolManager(1,
                     rsp = client.salvageCard(cid)
             sp = rsp['user_data']['salvage']
             print('SP: {}'.format(sp))
+            continue
+        if args[0] == 'buy20':
+            count = 1 if len(args) < 2 else int(args[1])
+            rarity2cid2count = {} # map: rarity -> card_id -> count
+            def _collect_rarity_to_count(resp):
+                if ('new_cards_data' not in resp):
+                    print(f'WARN: no new_cards_data in response')
+                    return
+                total_count = 0
+                for item in resp['new_cards_data']:
+                    xid, num = int(item['id']), int(item['number'])
+                    if (xid not in id_to_cards):
+                        print(f'WARN: no such card: id={xid}')
+                        continue
+                    rkey = id_to_cards[xid]['rarity']
+                    cid2count = rarity2cid2count.get(rkey, None)
+                    if (cid2count is None):
+                        rarity2cid2count[rkey] = cid2count = {xid: num}
+                    else:
+                        cid2count[xid] = cid2count.get(xid, 0) + num
+                    total_count += num
+                return total_count
+            total_count = 0
+            for i in range(0, count):
+                rsp = client.buyGold20x()
+                next_pack_count = _collect_rarity_to_count(rsp)
+                if (not next_pack_count):
+                    break
+                total_count += next_pack_count
+            print(f' >> Total bought {total_count} cards')
+            for rid, cid2cnt in rarity2cid2count.items():
+                if (rid <= 2): continue
+                cnt = sum(cid2cnt.values())
+                print(f'   >> {cnt} x {getRarityName(rid)}')
+                for cid, cnt in cid2cnt.items():
+                    cname = id_to_cards[cid]['full_name']
+                    print(f'     * {cnt} x {cname}')
             continue
         if args[0] == 'card':
             if len(args) < 2:
