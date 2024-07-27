@@ -1,5 +1,5 @@
 # tyrant_optimize 
-[![Build Status](https://travis-ci.com/APN-Pucky/tyrant_optimize.svg?branch=merged)](https://travis-ci.com/APN-Pucky/tyrant_optimize) [![Coverage Status](https://coveralls.io/repos/github/APN-Pucky/tyrant_optimize/badge.svg?branch=merged)](https://coveralls.io/github/APN-Pucky/tyrant_optimize?branch=master) ![downloads](https://img.shields.io/github/downloads/APN-Pucky/tyrant_optimize/total)
+[![Build Status](https://travis-ci.com/APN-Pucky/tyrant_optimize.svg?branch=merged)](https://travis-ci.com/APN-Pucky/tyrant_optimize) [![Coverage Status](https://coveralls.io/repos/github/APN-Pucky/tyrant_optimize/badge.svg?branch=master)](https://coveralls.io/github/APN-Pucky/tyrant_optimize?branch=master) ![downloads](https://img.shields.io/github/downloads/APN-Pucky/tyrant_optimize/total)
 
 Simulator for the card game [tyrant_unleashed](https://www.kongregate.com/games/synapticon/tyrant-unleashed-web) (See also [Tyrant Wiki](https://tyrantunleashed.fandom.com/wiki/Tyrant_Unleashed_Wiki)).
 

@@ -5,9 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [6.5.0] - 2023-07-11
+## [Unreleased]
 
-- Updated Subdue skill now cancels an attack, if subdue reduces the attack to 0 
+## [6.5.0] - 2024-03-15
+
+### Added
+
+- more tests of skills and bges (#66, #71)
+
+### Fixed
+
+- `all="0"` in xmls is treated as no all attribute (#70)
+- structures now can have barrier (#71) 
+- test of db scaling did not write to db (#71)
+- memory leak in test runs (#71)
+- segfault on missing operation (#71)
+
+## [6.5.0-alpha] - 2023-07-11
+
+- Updated Subdue skill now cancels an attack, if subdue reduces the attack to 0
 - Update corrosive skill
 - Added options `update-corrosive-protect-armor` and `no-update-corrosive-protect-armor` to toggle new behaviour (default: updated)
 

@@ -1,0 +1,28 @@
+name: pre-release
+
+on: [push]
+
+jobs:
+  build:
+    name: ubuntu
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Get tags from git
+        run: git fetch --prune --unshallow --tags
+      # Build it
+      - run: "./build/windows/requirements.sh"
+      - run: "./build/windows/build.sh"
+      - run: ./update_xml.sh
+      - run: source build/windows/package.sh
+
+      - name: Upload tuo
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuo
+          path: |
+            *.exe
+            *.zip

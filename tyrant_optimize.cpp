@@ -14,7 +14,13 @@
 // #define NDEBUG
 #define BOOST_THREAD_USE_LIB
 
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#include <io.h>
+#define F_OK 0
+#define access(f, m) _access((f), (m))
+#endif
 #include <array>
 #include <cassert>
 #include <chrono>
@@ -268,6 +274,7 @@ void load_db(std::string prefix)
 {
     if (use_db_load)
     {
+        _DEBUG_MSG(1, "start loading db\n");
         // open file to read from
         std::ifstream file;
         file.open(prefix + "data/database.yml");
@@ -333,6 +340,7 @@ void load_db(std::string prefix)
         }
         // close file
         file.close();
+        _DEBUG_MSG(1, "done loading db\n");
     }
 }
 
@@ -341,6 +349,7 @@ void write_db(std::string prefix)
 {
     if (use_db_write)
     {
+        _DEBUG_MSG(1, "start writing to db\n");
         // open file to write to
         std::ofstream file;
         file.open(prefix + "data/database.yml");
@@ -365,11 +374,14 @@ void write_db(std::string prefix)
         }
         // close file
         file.close();
+        _DEBUG_MSG(1, "done writing to db\n");
     }
 }
 
 void init()
 {
+    debug_str.clear();
+    database.clear();
     thread_num_iterations = 0; // written by threads
     thread_results = nullptr;  // written by threads
     thread_best_results = nullptr;
@@ -455,9 +467,7 @@ void init()
     prefered_skills.clear();
     prefered_factor = 3;
 
-    for (Card *c : all_cards.all_cards)
-        delete c; // prevent memory leak
-    all_cards.visible_cardset.clear();
+    all_cards.clear();
 
     // fix defaults
     for (int i = 0; i < Fix::num_fixes; ++i)
@@ -505,7 +515,7 @@ extern "C" JNIEXPORT void
     public:
         enum
         {
-            bufsize = 256
+            bufsize = 512
         }; // ... or some other suitable buffer size
         androidbuf() { this->setp(buffer, buffer + bufsize - 1); }
 
@@ -517,33 +527,43 @@ extern "C" JNIEXPORT void
                 *this->pptr() = traits_type::to_char_type(c);
                 this->sbumpc();
             }
-            return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
+            sync_me(c);
+            return traits_type::not_eof(c);
         }
-        int sync()
-        {
-            int rc = 0;
+
+        void sync_me(int overflow=0) {
             if (this->pbase() != this->pptr())
             {
-                auto sss = std::string(this->pbase(),
-                                       this->pptr() - this->pbase())
-                               .c_str();
+                char writebuf[bufsize+2];
+                memcpy(writebuf, this->pbase(), this->pptr() - this->pbase() );
+                writebuf[this->pptr() - this->pbase() ] = overflow;
+                writebuf[this->pptr() - this->pbase() + 1 ] = '\0';
+                //auto sss = std::string(writebuf).c_str();
+                ///*
                 __android_log_print(ANDROID_LOG_DEBUG,
                                     "TUO_TUO",
                                     "%s",
-                                    sss);
-                jstring jstr = envv->NewStringUTF(sss);
+                                    writebuf);
+                //*/
+                jstring jstr = envv->NewStringUTF(writebuf);
                 jclass clazz = envv->FindClass("de/neuwirthinformatik/alexander/mtuo/TUO");
                 jmethodID messageMe = envv->GetMethodID(clazz, "output", "(Ljava/lang/String;)V");
                 envv->CallVoidMethod(objv, messageMe, jstr);
-                rc = 0;
                 this->setp(buffer, buffer + bufsize - 1);
             }
-            return rc;
+        }
+
+        int sync()
+        {
+            sync_me(0);
+            return 0;
         }
         char buffer[bufsize];
     };
-    std::cout.rdbuf(new androidbuf);
-    std::cerr.rdbuf(new androidbuf);
+    auto ao = new androidbuf();
+    auto ae = new androidbuf();
+    std::cout.rdbuf(ao);
+    std::cerr.rdbuf(ae);
     __android_log_write(ANDROID_LOG_DEBUG, "TUO_TUO", "START");
     int stringCount = env->GetArrayLength(stringArray);
     char **param = new char *[stringCount];
@@ -566,6 +586,11 @@ extern "C" JNIEXPORT void
     }
     // std::string text = "return";
     // return env->NewStringUTF(text.c_str());
+    delete[] param;
+    delete[] cparam;
+    delete[] strs;
+    delete ao;
+    delete ae;
 }
 
 extern "C" JNIEXPORT jstring
@@ -2518,6 +2543,8 @@ DeckResults run(int argc, const char **argv)
 
     for (int argIndex = 3; argIndex < argc; ++argIndex)
     {
+        //bypass MSVS issue: Nesting of code blocks exceeds the limit of 128 nesting levels
+        bool tokenParsed = true;
         if (strcmp(argv[argIndex], "deck") == 0)
         {
             your_deck_list = std::string(argv[argIndex + 1]);
@@ -3243,7 +3270,14 @@ DeckResults run(int argc, const char **argv)
             opt_multi_optimization = true;
             argIndex += 3;
         }
-        else if (strcmp(argv[argIndex], "genetic") == 0)
+        else {
+            tokenParsed = false;
+        }
+        
+        if (!tokenParsed)
+        {
+        //no indent: keep two parts of a nested if at the same level
+        if (strcmp(argv[argIndex], "genetic") == 0)
         {
             if (check_input_amount(argc, argv, argIndex, 1))
                 exit(1);
@@ -3442,6 +3476,7 @@ DeckResults run(int argc, const char **argv)
             std::cerr << "Error: Unknown option " << argv[argIndex] << std::endl;
             exit(1);
         }
+        } // if (tokenParsed)
     }
     load_db(prefix);
     load_ml(prefix);
@@ -3449,9 +3484,11 @@ DeckResults run(int argc, const char **argv)
 #ifdef _OPENMP
     opt_num_threads = omp_get_max_threads();
 #endif
-    // TODO delete ? since prefix/suffix might change we reload all cards.
-    // if(all_cards.all_cards.size()>0) delete(&all_cards); // complains invalid pointer
-    // all_cards.organize();
+    // delete, since prefix/suffix might change we reload all cards.
+    // redundant to calling init() before run()
+    all_cards.clear();
+    owned_alpha_dominion = nullptr;
+
     all_cards = Cards();
     Decks decks;
     std::unordered_map<std::string, std::string> bge_aliases;
@@ -4071,6 +4108,8 @@ DeckResults run(int argc, const char **argv)
 
     auto your_deck = your_decks[0];
 
+    if (!opt_todo.empty())
+    {
     auto op = opt_todo.back();
     // for (auto op: opt_todo)
     {
@@ -4197,6 +4236,10 @@ DeckResults run(int argc, const char **argv)
         }
     }
     write_db(prefix);
+    }
+    else {
+        std::cout << "No operation specified" << std::endl;
+    }
     return fr;
 }
 
@@ -4396,7 +4439,6 @@ int main(int argc, const char **argv)
         usage(argc, argv);
         return 255;
     }
-    // init();
     start(argc, argv);
     return 0;
 }

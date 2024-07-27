@@ -1,10 +1,14 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.12)
 
 # partial module - included by src/cmake/CMakeLists.txt
 
 #set(TGT test-${PKG}-cmake)
 set( CMAKE_CXX_STANDARD 14 )
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj /W3 /wd4061 /wd4100 /wd4820 /wd4514")
+else()
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Ofast")
+endif()
 if(STATIC)
 set( BUILD_SHARED_LIBRARIES OFF)
 set( Boost_USE_STATIC_LIBS ON )
@@ -30,7 +34,8 @@ if (OPENMP_FOUND)
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 endif()
-find_package(Boost EXACT COMPONENTS system thread filesystem regex timer REQUIRED)
+find_package(Boost COMPONENTS system thread filesystem regex timer REQUIRED)
+include_directories( ${Boost_INCLUDE_DIR} )
 
 target_link_libraries(tuo ${Boost_LIBRARIES} )
 
