@@ -15,6 +15,7 @@ import configparser
 import optparse
 
 from random import randint
+from typing import *
 
 from xml.dom import minidom
 from xml.dom.minidom import Element
@@ -380,6 +381,8 @@ for i in range(1, 100):
             card_next = {}
             card_next.update(card_prev)
             card_next['id'] = upgrade_get('card_id', int)
+            card_prev['next_id'] = card_next['id']
+            card_next['prev_id'] = card_prev['id']
             card_next['level'] = upgrade_get('level', int)
             card_next['hp'] = upgrade_get('health', int) or card_prev['hp']
             card_next['attack'] = upgrade_get('attack', int) or card_prev['attack']
@@ -549,9 +552,29 @@ class TUApiClient:
         })
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
+    def upgradeCard(self, cid, in_deck: bool = False):
+        rd = self.__mkRequestData('upgradeCard', {
+            'in_deck': str(int(in_deck)),
+            'card_id': str(cid),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def fuseCard(self, cid):
+        rd = self.__mkRequestData('fuseCard', {
+            'card_id': str(cid),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
     def salvageCard(self, cid):
         rd = self.__mkRequestData('salvageCard', {
             'card_id': str(cid),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def buybackCard(self, cid, count: int = 1):
+        rd = self.__mkRequestData('buybackCard', {
+            'card_id': str(cid),
+            'number': str(count),
         })
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
@@ -804,6 +827,80 @@ atexit.register(readline.write_history_file, histfile)
 ##  Command Handlers
 ##
 
+def cmd_fuse(client, args):
+    if (len(args) < 2):
+        print('USAGE: fuse <"Card Name"|id> [in-deck]')
+        return
+    c_id = None
+    if re.match(r'^\d+$', args[1]):
+        c_id = int(args[1])
+        if (c_id not in id_to_cards):
+            print(f'No such card: id={args[1]}')
+            return
+    else:
+        pattern_pred = lambda c: c['full_name'] == args[1]
+        for xid, c in id_to_cards.items():
+            if pattern_pred(c):
+                c_id = xid
+                break
+        if (c_id is None):
+            print(f'No such card: name "{args[1]}"')
+            return
+    def up_or_fuse(target_cid: int, dep_list: List[int]):
+        target = id_to_cards[target_cid]
+        #print(f'DEBUG: up-or-fuse [{target_cid}] {target["full_name"]}')
+
+        # is target non-1st level card?
+        if ('prev_id' in target):
+            p_id = target['prev_id']
+            def _up(x_id):
+                sxid = str(x_id)
+                if (sxid not in client.lastUserCards):
+                    return None
+                if (int(client.lastUserCards[sxid]['num_owned'] or 0) < 1):
+                    return None
+                print(f'Upgrade card: [{x_id}] => [{target_cid}] {target["full_name"]}')
+                rsp = client.upgradeCard(x_id)
+                print('SP: {}'.format(rsp['user_data']['salvage']))
+                return x_id
+            if _up(p_id):
+                return p_id
+            if (not up_or_fuse(p_id, dep_list)):
+                return None
+            if _up(p_id):
+                return p_id
+            print(f'WARNING: not enough resources to build {target["full_name"]} (deps: {dep_list})')
+            return None
+
+        # it's 1st level, check fusion receipt
+        else:
+            if (target['low_id'] != target_cid):
+                print(f'ERROR: DB: is not low level id: [{target_cid}] {target["full_name"]}')
+                return None
+            from_cards = fusion_from_cards.get(target_cid, None)
+            if (not from_cards):
+                print(f'ERROR: No owned card [{target_cid}] {target["full_name"]}')
+                return None
+            from_cids = []
+            for d_id, count in from_cards.items():
+                sdid = str(d_id)
+                from_cids += [d_id,] * count
+                xcnt = int(client.lastUserCards[sdid]['num_owned'] or 0) \
+                    if (sdid in client.lastUserCards) else 0
+                while (xcnt < count):
+                    if (not up_or_fuse(d_id, dep_list + [d_id])):
+                        return None
+                    prev_xcnt = xcnt
+                    xcnt = int(client.lastUserCards[sdid]['num_owned'] or 0)
+                    if (prev_xcnt == xcnt):
+                        print(f'ERROR: num owned is not changed for {sdid}')
+                        return None
+            print(f'Fuse card: {from_cids} => [{target_cid}] {target["full_name"]}')
+            rsp = client.fuseCard(target_cid)
+            return target_cid
+    up_or_fuse(c_id, [c_id])
+    return
+
 def cmd_salvage(client, args):
     if (len(args) < 2):
         print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
@@ -817,8 +914,17 @@ def cmd_salvage(client, args):
         count = 1 if (len(args) < 3) else int(args[2])
         for i in range(0, count):
             rsp = client.salvageCard(cid)
-    sp = rsp['user_data']['salvage']
-    print('SP: {}'.format(sp))
+    print('SP: {}'.format(rsp['user_data']['salvage']))
+    return
+
+def cmd_buyback(client, args):
+    if (len(args) < 2):
+        print('USAGE: buyback <CARD_ID> [COUNT]')
+        return
+    cid = int(args[1])
+    count = 1 if (len(args) < 3) else int(args[2])
+    rsp = client.buybackCard(cid, count)
+    print('SP: {}'.format(rsp['user_data']['salvage']))
     return
 
 def cmd_buy20(client, args) -> int:
@@ -857,6 +963,7 @@ def cmd_buy20(client, args) -> int:
         for cid, cnt in cid2cnt.items():
             cname = id_to_cards[cid]['full_name']
             print(f'     * {cnt} x {cname}')
+    print('SP: {}'.format(rsp['user_data']['salvage']))
     return total_count
 
 def cmd_card(client, args):
@@ -998,8 +1105,12 @@ with PoolManager(1,
                 doGrabLastDeck(client)
             elif (args[0] == 'hunt'):
                 doHuntAndEnrichUserDb(client)
+            elif (args[0] == 'fuse'):
+                cmd_fuse(client, args)
             elif (args[0] == 'salvage'):
                 cmd_salvage(client, args)
+            elif (args[0] == 'buyback'):
+                cmd_buyback(client, args)
             elif (args[0] == 'buy20'):
                 cmd_buy20(client, args)
             elif (args[0] == 'card'):
@@ -1012,3 +1123,5 @@ with PoolManager(1,
                     f'[ init | grab | hunt | salvage | buy20 | card | dump | exit/quit ])')
         except Exception as e:
             print(f'ERROR: failed processing command {args[0]}: {e}')
+            import traceback
+            traceback.print_exc()
