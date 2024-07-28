@@ -478,13 +478,13 @@ class TUApiClient:
         self.login = login
 
     def __enrich_last_data(self, resp):
-        if 'buyback_data' in resp:
+        if ('buyback_data' in resp):
             self.lastBuybackData = resp['buyback_data']
-        if 'user_cards' in resp:
+        if ('user_cards' in resp):
             self.lastUserCards = resp['user_cards']
-        if 'user_data' in resp:
+        if ('user_data' in resp):
             self.lastUserData = resp['user_data']
-        if 'user_decks' in resp:
+        if ('user_decks' in resp):
             self.lastUserDecks = resp['user_decks']
 
     def getUserName(self):
@@ -572,11 +572,11 @@ class TUApiClient:
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
     def getDecksText(self, card_id2name_resolver = getCardNameById):
-        if not self.lastUserDecks:
+        if (not self.lastUserDecks):
             return None
         txt = '// Begin decks dump for user: {}\n'.format(self.getUserName())
         def _get_attr(d, name, typ=str):
-            if name not in d or d[name] is None:
+            if (name not in d) or (d[name] is None):
                 return None
             return typ(d[name])
         decks = list(self.lastUserDecks.values())
@@ -610,7 +610,7 @@ class TUApiClient:
         rarities = [6, 5, 4, 3]
         f_r_cards = {}
         def _set_f_r_cards(c_id, count):
-            if c_id not in id_to_cards:
+            if (c_id not in id_to_cards):
                 raise Exception('No such card: id=' + str(c_id))
             c = id_to_cards[c_id]
             f = c['faction']
@@ -626,7 +626,7 @@ class TUApiClient:
             if count:
                 _set_f_r_cards(c_id, count)
         for f in factions:
-            if f not in f_r_cards:
+            if (f not in f_r_cards):
                 continue
             txt += '\n// *** [ {} ] ***\n'.format(getFactionName(f))
             for r in rarities:
@@ -640,14 +640,14 @@ class TUApiClient:
         return txt
 
     def getBuybackText(self, card_id2name_resolver = getCardNameById):
-        if not self.lastBuybackData:
+        if (not self.lastBuybackData):
             return None
         txt = '// Buyback cards of user "{}"\n'.format(self.getUserName())
         txt += self.getCardsText0(self.lastBuybackData, 'number', card_id2name_resolver)
         return txt
 
     def getCardsText(self, card_id2name_resolver = getCardNameById):
-        if not self.lastUserCards:
+        if (not self.lastUserCards):
             return None
         txt = '// Cards of user "{}" (without buyback)\n'.format(self.getUserName())
         txt += self.getCardsText0(self.lastUserCards, 'num_owned', card_id2name_resolver)
@@ -687,7 +687,6 @@ def doGrabLastDeck(client):
     res = orig_res = client.getBattleResults()
     if (not res) or ('battle_data' not in res):
         print('WARN: grab failed')
-        return
         return
     res = res['battle_data']
     enemy_id = int(res['enemy_id'] or -1)
@@ -800,6 +799,153 @@ readline.set_history_length(1000)
 readline.read_init_file()
 atexit.register(readline.write_history_file, histfile)
 
+
+##
+##  Command Handlers
+##
+
+def cmd_salvage(client, args):
+    if (len(args) < 2):
+        print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
+        return
+    if (args[1] == 'commons'):
+        rsp = client.salvageL1CommonCards()
+    elif (args[1] == 'rares'):
+        rsp = client.salvageL1RareCards()
+    elif re.match(r'^\d+$', args[1]):
+        cid = int(args[1])
+        count = 1 if (len(args) < 3) else int(args[2])
+        for i in range(0, count):
+            rsp = client.salvageCard(cid)
+    sp = rsp['user_data']['salvage']
+    print('SP: {}'.format(sp))
+    return
+
+def cmd_buy20(client, args) -> int:
+    count = 1 if (len(args) < 2) else int(args[1])
+    rarity2cid2count = {} # map: rarity -> card_id -> count
+    def _collect_rarity_to_count(resp):
+        if ('new_cards_data' not in resp):
+            print(f'WARN: no new_cards_data in response')
+            return
+        total_count = 0
+        for item in resp['new_cards_data']:
+            xid, num = int(item['id']), int(item['number'])
+            if (xid not in id_to_cards):
+                print(f'WARN: no such card: id={xid}')
+                continue
+            rkey = id_to_cards[xid]['rarity']
+            cid2count = rarity2cid2count.get(rkey, None)
+            if (cid2count is None):
+                rarity2cid2count[rkey] = cid2count = {xid: num}
+            else:
+                cid2count[xid] = cid2count.get(xid, 0) + num
+            total_count += num
+        return total_count
+    total_count = 0
+    for i in range(0, count):
+        rsp = client.buyGold20x()
+        next_pack_count = _collect_rarity_to_count(rsp)
+        if (not next_pack_count):
+            break
+        total_count += next_pack_count
+    print(f' >> Total bought {total_count} cards')
+    for rid, cid2cnt in rarity2cid2count.items():
+        if (rid <= 2): continue
+        cnt = sum(cid2cnt.values())
+        print(f'   >> {cnt} x {getRarityName(rid)}')
+        for cid, cnt in cid2cnt.items():
+            cname = id_to_cards[cid]['full_name']
+            print(f'     * {cnt} x {cname}')
+    return total_count
+
+def cmd_card(client, args):
+    if (len(args) < 2):
+        print('USAGE: card <ID|"NAME"|"/REGEX/">')
+        return
+    def showCard(card, with_fusions=True):
+        print(' >> Card [{}] {}'.format(card['id'], card['full_name']))
+        print('    {} {} {} (set {}{})'.format(
+            getFusionName(card['fusion']),
+            getRarityName(card['rarity']),
+            getFactionName(card['faction']),
+            card['set'],
+            (', orig set {}'.format(card['orig_set']) if ('orig_set' in card) else '')
+        ))
+        print('    ATT {} / HP {} / CD {}'.format(card['attack'], card['hp'], card['delay']))
+        for s in card['skills']:
+            print('      >  ' + formatUnitSkill(s))
+        if (with_fusions):
+            f_from = fusion_from_cards.get(card['low_id'], None)
+            f_into = fusion_into_cards.get(card['top_id'], None)
+            if (f_from):
+                print('    Fused from:')
+                for f_c_id, cnt in f_from.items():
+                    print('      > card "{}" x {}'.format(getCardNameById(f_c_id), cnt))
+            if (f_into):
+                print('    Fuses into:')
+                for f_c_id in f_into:
+                    print('      > card "{}"'.format(getCardNameById(f_c_id)))
+    if re.match(r'^\d+$', args[1]):
+        c_id = int(args[1])
+        if (c_id not in id_to_cards):
+            print('No such card: id=' + args[1])
+            return
+        showCard(id_to_cards[c_id])
+    else:
+        if re.match(r'^/.+/$', args[1]):
+            pattern_regex = re.compile(args[1][1:-1])
+            pattern_pred = lambda c: pattern_regex.match(c['full_name']) and c['maxed']
+        else:
+            pattern_pred = lambda c: c['full_name'] == args[1]
+        for c in id_to_cards.values():
+            if pattern_pred(c):
+                showCard(c)
+    return
+
+def cmd_dump(client, args):
+    def _show_usage():
+        print('USAGE: dump <tuc|tuf|decks|cards|buyback> [PATH_TO_FILE]')
+    if (len(args) < 2):
+        return _show_usage()
+    out_fname = None if (len(args) < 3) else args[2]
+    def write_dump(data, append = False):
+        if (out_fname):
+            mode = append and 'wta' or 'wt'
+            w_size = 0
+            with open(out_fname, mode) as f:
+                w_size = f.write(data)
+                f.flush()
+            print('done (file: \'{}\', written {} bytes)'.format(out_fname, w_size))
+            return
+        sys.stdout.write(' --- >> BEGIN DUMP DATA << ---\n')
+        sys.stdout.write(data)
+        if not data.endswith('\n'):
+            sys.stdout.write('\n')
+        sys.stdout.write(' --- >> END DUMP DATA << ---\n')
+        sys.stdout.flush()
+    def write_dump_safe(name, data, append = False):
+        try:
+            write_dump(data, append=append)
+            return True
+        except Exception as e:
+            print(f'could not dump {name} data: {e}')
+            #import traceback
+            #traceback.print_exc()
+            return False
+    if (args[1] == 'tuc'):
+        return write_dump_safe(args[1], json.dumps(id_to_cards, indent=2))
+    if (args[1] == 'tuf'):
+        return write_dump_safe(args[1], {'from': fusion_from_cards, 'into': fusion_into_cards})
+    if (args[1] == 'decks'):
+        return write_dump_safe(args[1], client.getDecksText())
+    if (args[1] == 'cards'):
+        return write_dump_safe(args[1], client.getCardsText())
+    if (args[1] == 'buyback'):
+        return write_dump_safe(args[1], client.getBuybackText())
+    return _show_usage()
+
+# command loop
 with PoolManager(1,
             timeout = Timeout(connect=15.0, read=20.0, total=30.0),
             retries = Retry(total=3),
@@ -842,169 +988,27 @@ with PoolManager(1,
             if not quote:
                 c = c.lower()
             word = word + c if word else c
-        if args[0] == 'exit':
-            break
-        if args[0] == 'init':
-            client.getUserAccount()
-            client.runInit()
-            continue
-        if args[0] == 'grab':
-            doGrabLastDeck(client)
-            continue
-        if args[0] == 'hunt':
-            doHuntAndEnrichUserDb(client)
-            continue
-        if args[0] == 'salvage':
-            if len(args) < 2:
-                print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
-                continue
-            if args[1] == 'commons':
-                rsp = client.salvageL1CommonCards()
-            elif args[1] == 'rares':
-                rsp = client.salvageL1RareCards()
-            elif re.match(r'^\d+$', args[1]):
-                cid = int(args[1])
-                count = 1 if len(args) < 3 else int(args[2])
-                for i in range(0, count):
-                    rsp = client.salvageCard(cid)
-            sp = rsp['user_data']['salvage']
-            print('SP: {}'.format(sp))
-            continue
-        if args[0] == 'buy20':
-            count = 1 if len(args) < 2 else int(args[1])
-            rarity2cid2count = {} # map: rarity -> card_id -> count
-            def _collect_rarity_to_count(resp):
-                if ('new_cards_data' not in resp):
-                    print(f'WARN: no new_cards_data in response')
-                    return
-                total_count = 0
-                for item in resp['new_cards_data']:
-                    xid, num = int(item['id']), int(item['number'])
-                    if (xid not in id_to_cards):
-                        print(f'WARN: no such card: id={xid}')
-                        continue
-                    rkey = id_to_cards[xid]['rarity']
-                    cid2count = rarity2cid2count.get(rkey, None)
-                    if (cid2count is None):
-                        rarity2cid2count[rkey] = cid2count = {xid: num}
-                    else:
-                        cid2count[xid] = cid2count.get(xid, 0) + num
-                    total_count += num
-                return total_count
-            total_count = 0
-            for i in range(0, count):
-                rsp = client.buyGold20x()
-                next_pack_count = _collect_rarity_to_count(rsp)
-                if (not next_pack_count):
-                    break
-                total_count += next_pack_count
-            print(f' >> Total bought {total_count} cards')
-            for rid, cid2cnt in rarity2cid2count.items():
-                if (rid <= 2): continue
-                cnt = sum(cid2cnt.values())
-                print(f'   >> {cnt} x {getRarityName(rid)}')
-                for cid, cnt in cid2cnt.items():
-                    cname = id_to_cards[cid]['full_name']
-                    print(f'     * {cnt} x {cname}')
-            continue
-        if args[0] == 'card':
-            if len(args) < 2:
-                print('USAGE: card <ID|"NAME"|"/REGEX/">')
-                continue
-            def showCard(card, with_fusions=True):
-                print(' >> Card [{}] {}'.format(card['id'], card['full_name']))
-                print('    {} {} {} (set {}{})'.format(
-                    getFusionName(card['fusion']),
-                    getRarityName(card['rarity']),
-                    getFactionName(card['faction']),
-                    card['set'],
-                    (', orig set {}'.format(card['orig_set']) if ('orig_set' in card) else '')
-                ))
-                print('    ATT {} / HP {} / CD {}'.format(card['attack'], card['hp'], card['delay']))
-                for s in card['skills']:
-                    print('      >  ' + formatUnitSkill(s))
-                if (with_fusions):
-                    f_from = fusion_from_cards.get(card['low_id'], None)
-                    f_into = fusion_into_cards.get(card['top_id'], None)
-                    if (f_from):
-                        print('    Fused from:')
-                        for f_c_id, cnt in f_from.items():
-                            print('      > card "{}" x {}'.format(getCardNameById(f_c_id), cnt))
-                    if (f_into):
-                        print('    Fuses into:')
-                        for f_c_id in f_into:
-                            print('      > card "{}"'.format(getCardNameById(f_c_id)))
-            if re.match(r'^\d+$', args[1]):
-                c_id = int(args[1])
-                if c_id not in id_to_cards:
-                    print('No such card: id=' + args[1])
-                    continue
-                showCard(id_to_cards[c_id])
+        try:
+            if (args[0] in ('exit', 'quit')):
+                break
+            elif (args[0] == 'init'):
+                client.getUserAccount()
+                client.runInit()
+            elif (args[0] == 'grab'):
+                doGrabLastDeck(client)
+            elif (args[0] == 'hunt'):
+                doHuntAndEnrichUserDb(client)
+            elif (args[0] == 'salvage'):
+                cmd_salvage(client, args)
+            elif (args[0] == 'buy20'):
+                cmd_buy20(client, args)
+            elif (args[0] == 'card'):
+                cmd_card(client, args)
+            elif (args[0] == 'dump'):
+                cmd_dump(client, args)
             else:
-                if re.match(r'^/.+/$', args[1]):
-                    pattern_regex = re.compile(args[1][1:-1])
-                    pattern_pred = lambda c: pattern_regex.match(c['full_name']) and c['maxed']
-                else:
-                    pattern_pred = lambda c: c['full_name'] == args[1]
-                for c in id_to_cards.values():
-                    if pattern_pred(c):
-                        showCard(c)
-            continue
-        if args[0] == 'dump':
-            if len(args) < 2:
-                print('USAGE: dump <tuc|tuf|decks|cards|buyback> [PATH_TO_FILE]')
-                continue
-            out_fname = None if len(args) < 3 else args[2]
-            def write_dump(data, append = False):
-                if out_fname:
-                    mode = append and 'wta' or 'wt'
-                    w_size = 0
-                    with open(out_fname, mode) as f:
-                        w_size = f.write(data)
-                        f.flush()
-                    print('done (file: \'{}\', written {} bytes)'.format(out_fname, w_size))
-                    return
-                sys.stdout.write(' --- >> BEGIN DUMP DATA << ---\n')
-                sys.stdout.write(data)
-                if not data.endswith('\n'):
-                    sys.stdout.write('\n')
-                sys.stdout.write(' --- >> END DUMP DATA << ---\n')
-                sys.stdout.flush()
-            if args[1] == 'tuc':
-                try:
-                    write_dump(json.dumps(id_to_cards, indent=2))
-                except Exception as e:
-                    print('could not dump tuc data: {}'.format(e))
-                continue
-            if args[1] == 'tuf':
-                try:
-                    m = {'from': fusion_from_cards, 'into': fusion_into_cards}
-                    write_dump(json.dumps(m, indent=2))
-                except Exception as e:
-                    print('could not dump tuf data: {}'.format(e))
-                continue
-            if args[1] == 'decks':
-                try:
-                    write_dump(client.getDecksText())
-                except Exception as e:
-                    print('could not dump decks: {}'.format(e))
-                    import traceback
-                    traceback.print_exc()
-                continue
-            if args[1] == 'cards':
-                try:
-                    write_dump(client.getCardsText())
-                except Exception as e:
-                    print('could not dump cards: {}'.format(e))
-                    import traceback
-                    traceback.print_exc()
-                continue
-            if args[1] == 'buyback':
-                try:
-                    write_dump(client.getBuybackText())
-                except Exception as e:
-                    print('could not dump cards: {}'.format(e))
-                    import traceback
-                    traceback.print_exc()
-                continue
-        print('ERROR: unknown command: {} (supported: [ grab | hunt | dump | exit ])'.format(line))
+                print(
+                    f'ERROR: unknown command: {line} (supported: '
+                    f'[ init | grab | hunt | salvage | buy20 | card | dump | exit/quit ])')
+        except Exception as e:
+            print(f'ERROR: failed processing command {args[0]}: {e}')
