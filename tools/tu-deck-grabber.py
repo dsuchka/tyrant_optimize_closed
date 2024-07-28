@@ -907,14 +907,30 @@ def cmd_salvage(client, args):
         return
     if (args[1] == 'commons'):
         rsp = client.salvageL1CommonCards()
+        print('SP: {}'.format(rsp['user_data']['salvage']))
     elif (args[1] == 'rares'):
         rsp = client.salvageL1RareCards()
+        print('SP: {}'.format(rsp['user_data']['salvage']))
+    elif (args[1] == 'epics'):
+        limit = 100 if (len(args) < 3) else int(args[2])
+        for scid, obj in client.lastUserCards.items():
+            owned = int(obj['num_owned'] or 0)
+            if (owned <= limit):
+                continue
+            card = id_to_cards[int(scid)]
+            if (card['rarity'] != 3):
+                continue
+            count = owned - limit
+            print(f'Salvage [{scid}] {card["full_name"]} x {count} ({owned} -> {limit})')
+            for i in range(0, count):
+                rsp = client.salvageCard(card['id'])
+            print('SP: {}'.format(rsp['user_data']['salvage']))
     elif re.match(r'^\d+$', args[1]):
         cid = int(args[1])
         count = 1 if (len(args) < 3) else int(args[2])
         for i in range(0, count):
             rsp = client.salvageCard(cid)
-    print('SP: {}'.format(rsp['user_data']['salvage']))
+        print('SP: {}'.format(rsp['user_data']['salvage']))
     return
 
 def cmd_buyback(client, args):
