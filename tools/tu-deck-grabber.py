@@ -849,9 +849,10 @@ def cmd_fuse(client, args):
     def up_or_fuse(target_cid: int, dep_list: List[int]):
         target = id_to_cards[target_cid]
         #print(f'DEBUG: up-or-fuse [{target_cid}] {target["full_name"]}')
+        is_neocyte_dual = (target_cid == 42745)
 
         # is target non-1st level card?
-        if ('prev_id' in target):
+        if (not is_neocyte_dual) and ('prev_id' in target):
             p_id = target['prev_id']
             def _up(x_id):
                 sxid = str(x_id)
@@ -874,7 +875,7 @@ def cmd_fuse(client, args):
 
         # it's 1st level, check fusion receipt
         else:
-            if (target['low_id'] != target_cid):
+            if (not is_neocyte_dual) and (target['low_id'] != target_cid):
                 print(f'ERROR: DB: is not low level id: [{target_cid}] {target["full_name"]}')
                 return None
             from_cards = fusion_from_cards.get(target_cid, None)
