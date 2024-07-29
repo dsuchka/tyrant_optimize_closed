@@ -426,6 +426,12 @@ def getCardNameById(card_id):
         return id_to_cards[card_id]['full_name']
     return '[{}]'.format(card_id)
 
+def getFirstCardByName(card_name, defValue = None):
+    for c in id_to_cards.values():
+        if (c['full_name'] == card_name):
+            return c
+    return defValue
+
 def encodeUrlParams(kvmap):
     return '&'.join('{}={}'.format(k, v) for (k, v) in kvmap.items())
 
@@ -499,7 +505,7 @@ class TUApiClient:
             method_name,
             request_data,
             tries = None,
-            check_result: bool = None
+            check_result: bool = True
         ):
         try_no = 0
         tries = (self.defaultTries) if (tries is None) else (tries)
@@ -543,11 +549,11 @@ class TUApiClient:
 
     def getUserAccount(self):
         rd = self.__mkRequestData('getUserAccount', { 'udid': 'n/a' }, api_stat_name = None)
-        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd, check_result = False)
 
     def runInit(self):
         rd = self.__mkRequestData('init', {}, api_stat_name = 'getUserAccount')
-        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd, check_result = False)
 
     def getHuntingTargets(self):
         rd = self.__mkRequestData('getHuntingTargets', {
@@ -601,6 +607,48 @@ class TUApiClient:
             'expected_cost': '2000',
             'item_id': '48',
             'item_type': '3',
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def setActiveDeck(self, deck_id: int):
+        rd = self.__mkRequestData('setActiveDeck', {
+            'deck_id': str(deck_id),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def setDefenseDeck(self, deck_id: int):
+        rd = self.__mkRequestData('setDefenseDeck', {
+            'deck_id': str(deck_id),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def setDeckCards(self,
+            deck_id: int,
+            dominion_id: int,
+            commander_id: int,
+            card_ids: List[int],
+            active: bool = True
+        ):
+        card_map = {}
+        for cid in card_ids:
+            card_map[cid] = card_map.get(cid, 0) + 1
+        card_map_texted = '{'
+        for k, v in card_map.items():
+            card_map_texted += f'"{k}":"{v}",'
+        card_map_texted = card_map_texted[:-1] + '}'
+        rd = self.__mkRequestData('setDeckCards', {
+            'deck_id': str(deck_id),
+            'dominion_id': str(dominion_id),
+            'commander_id': str(commander_id),
+            'cards': card_map_texted,
+            'activeYN': str(int(active)),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def setDeckDominion(self, deck_id: int, dominion_id: int):
+        rd = self.__mkRequestData('setDeckDominion', {
+            'deck_id': str(deck_id),
+            'dominion_id': str(dominion_id),
         })
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
@@ -915,6 +963,50 @@ def cmd_fuse(client, args):
     up_or_fuse(c_id, [c_id])
     return
 
+def cmd_deck(client, args):
+    if (len(args) < 3):
+        print('USAGE: deck <DECK_ID> <"Deck cards"|active|defense>')
+        return
+    deck_id = int(args[1])
+    # set active
+    if (args[2].lower() in ('atk', 'attack', 'offense', 'active')):
+        rsp = client.setActiveDeck(deck_id)
+        if (not rsp):
+            print(f'ERROR: could not set active deck id {deck_id}')
+        return
+    # set defense
+    if (args[2].lower() in ('def', 'defense', 'passive')):
+        rsp = client.setDefenseDeck(deck_id)
+        if (not rsp):
+            print(f'ERROR: could not set defense deck id {deck_id}')
+        return
+    deck_cards = re.split(r'\s*,\s*', args[2])
+    commander_id = None
+    dominion_id = None
+    card_ids = []
+    qnt_pattern = re.compile(r'^(?P<name>.+?)\s*#(?P<qnt>\d+)$')
+    for cname in deck_cards:
+        qnt = 1
+        m = qnt_pattern.match(cname)
+        if (m):
+            cname = m.group('name')
+            qnt = int(m.group('qnt'))
+        card = getFirstCardByName(cname, None)
+        if (not card):
+            print(f'ERROR: unknown card name: {cname}')
+            return
+        cid = card['id']
+        if (commander_id is None):
+            commander_id = cid
+        elif (dominion_id is None) and (cname.startswith('Alpha ') or cname.endswith(' Nexus')):
+            dominion_id = cid
+        else:
+            card_ids += [cid,] * qnt
+    rsp = client.setDeckCards(deck_id, dominion_id, commander_id, card_ids)
+    if (not rsp):
+        print(f'ERROR: failed to set deck cards')
+    return
+
 def cmd_salvage(client, args):
     if (len(args) < 2):
         print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
@@ -1172,10 +1264,13 @@ with PoolManager(1,
                 cmd_card(client, args)
             elif (args[0] == 'dump'):
                 cmd_dump(client, args)
+            elif (args[0] == 'deck'):
+                cmd_deck(client, args)
             else:
                 print(
                     f'ERROR: unknown command: {line} (supported: '
-                    f'[ init | grab | hunt | salvage | buy20 | card | dump | exit/quit ])')
+                    f'[ init | grab | hunt | fuse | salvage | buyback | buy20 '
+                    f'| card | dump | deck | exit/quit ])')
         except Exception as e:
             print(f'ERROR: failed processing command {args[0]}: {e}')
             import traceback
