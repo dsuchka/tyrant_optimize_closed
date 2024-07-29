@@ -495,7 +495,12 @@ class TUApiClient:
             return self.lastUserData['name']
         return 'login:' + self.login
 
-    def __run_api_req_with_retries(self, method_name, request_data, tries = None):
+    def __run_api_req_with_retries(self,
+            method_name,
+            request_data,
+            tries = None,
+            check_result: bool = None
+        ):
         try_no = 0
         tries = (self.defaultTries) if (tries is None) else (tries)
         while (try_no < tries):
@@ -520,8 +525,13 @@ class TUApiClient:
                 f.flush()
             resp = json.loads(data)
             self.__enrich_last_data(resp)
+            if (check_result):
+                rslt = resp.get('result', None)
+                if (not rslt):
+                    print(f'ERROR: {method_name}: {rslt is None and "no" or "negative"} result')
+                    return None
             return resp
-        print('ERROR: {}: no data (all tries are spent)'.format(method_name))
+        print(f'ERROR: {method_name}: no data (all tries are spent)')
         return None
 
     def __mkRequestData(self, method_name, body_params, api_stat_name = None):
@@ -862,6 +872,9 @@ def cmd_fuse(client, args):
                     return None
                 print(f'Upgrade card: [{x_id}] => [{target_cid}] {target["full_name"]}')
                 rsp = client.upgradeCard(x_id)
+                if (not rsp):
+                    print(f'ERROR: failed to upgrade card id {x_id}')
+                    return None
                 print('SP: {}'.format(rsp['user_data']['salvage']))
                 return x_id
             if _up(p_id):
@@ -870,7 +883,7 @@ def cmd_fuse(client, args):
                 return None
             if _up(p_id):
                 return p_id
-            print(f'WARNING: not enough resources to build {target["full_name"]} (deps: {dep_list})')
+            print(f'WARN: not enough resources to build {target["full_name"]} (deps: {dep_list})')
             return None
 
         # it's 1st level, check fusion receipt
@@ -906,11 +919,28 @@ def cmd_salvage(client, args):
     if (len(args) < 2):
         print('USAGE: salvage <CARD_ID|commons|rares> [COUNT]')
         return
+    def _salvage_many(cid, count):
+        last_rsp = None
+        for i in range(0, count):
+            rsp = client.salvageCard(cid)
+            if (not rsp):
+                card = id_to_cards[cid]
+                print(f'ERROR: failed to salvage [{cid}] {card["full_name"]}')
+                break
+            last_rsp = rsp
+        if (last_rsp):
+            print('SP: {}'.format(last_rsp['user_data']['salvage']))
     if (args[1] == 'commons'):
         rsp = client.salvageL1CommonCards()
+        if (not rsp):
+            print(f'ERROR: failed to salvage L1 common cards')
+            return
         print('SP: {}'.format(rsp['user_data']['salvage']))
     elif (args[1] == 'rares'):
         rsp = client.salvageL1RareCards()
+        if (not rsp):
+            print(f'ERROR: failed to salvage L1 rare cards')
+            return
         print('SP: {}'.format(rsp['user_data']['salvage']))
     elif (args[1] == 'epics'):
         limit = 100 if (len(args) < 3) else int(args[2])
@@ -923,15 +953,13 @@ def cmd_salvage(client, args):
                 continue
             count = owned - limit
             print(f'Salvage [{scid}] {card["full_name"]} x {count} ({owned} -> {limit})')
-            for i in range(0, count):
-                rsp = client.salvageCard(card['id'])
-            print('SP: {}'.format(rsp['user_data']['salvage']))
+            _salvage_many(card['id'], count)
     elif re.match(r'^\d+$', args[1]):
         cid = int(args[1])
         count = 1 if (len(args) < 3) else int(args[2])
-        for i in range(0, count):
-            rsp = client.salvageCard(cid)
-        print('SP: {}'.format(rsp['user_data']['salvage']))
+        _salvage_many(cid, count)
+    else:
+        print(f'ERROR: salvage: unknown command: {args[1]}')
     return
 
 def cmd_buyback(client, args):
@@ -941,6 +969,10 @@ def cmd_buyback(client, args):
     cid = int(args[1])
     count = 1 if (len(args) < 3) else int(args[2])
     rsp = client.buybackCard(cid, count)
+    if (not rsp):
+        card = id_to_cards.get(cid, None)
+        print(f'ERROR: failed to buyback [{cid}] {card and card["full_name"] or "(???)"}')
+        return
     print('SP: {}'.format(rsp['user_data']['salvage']))
     return
 
@@ -966,8 +998,13 @@ def cmd_buy20(client, args) -> int:
             total_count += num
         return total_count
     total_count = 0
+    last_rsp = None
     for i in range(0, count):
         rsp = client.buyGold20x()
+        if (not rsp):
+            print(f'WARN: failed to buy pack 20 cards')
+            break
+        last_rsp = rsp
         next_pack_count = _collect_rarity_to_count(rsp)
         if (not next_pack_count):
             break
@@ -980,7 +1017,8 @@ def cmd_buy20(client, args) -> int:
         for cid, cnt in cid2cnt.items():
             cname = id_to_cards[cid]['full_name']
             print(f'     * {cnt} x {cname}')
-    print('SP: {}'.format(rsp['user_data']['salvage']))
+    if (last_rsp):
+        print('SP: {}'.format(last_rsp['user_data']['salvage']))
     return total_count
 
 def cmd_card(client, args):
