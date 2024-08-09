@@ -422,9 +422,15 @@ for card in id_to_cards.values():
         card['orig_set'] = orig_set
 
 def getCardNameById(card_id):
-    if card_id in id_to_cards:
+    if (card_id in id_to_cards):
         return id_to_cards[card_id]['full_name']
     return '[{}]'.format(card_id)
+
+def getCardNameByIdWithIdPrefix(card_id):
+    if (card_id in id_to_cards):
+        nm = id_to_cards[card_id]['full_name']
+        return f'[{card_id}] {nm}'
+    return '[{}] (--no name--)'.format(card_id)
 
 def getFirstCardByName(card_name, defValue = None):
     for c in id_to_cards.values():
@@ -559,14 +565,14 @@ class TUApiClient:
         rd = self.__mkRequestData('getHuntingTargets', {
             'dummy': 'data',
         })
-        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd, check_result = False)
 
     def getBattleResults(self):
         rd = self.__mkRequestData('getBattleResults', {
             'battle_id': '0',
             'host_id': '0',
         })
-        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd, check_result = False)
 
     def upgradeCard(self, cid, in_deck: bool = False):
         rd = self.__mkRequestData('upgradeCard', {
@@ -885,6 +891,8 @@ atexit.register(readline.write_history_file, histfile)
 ##  Command Handlers
 ##
 
+_cn = getCardNameByIdWithIdPrefix
+
 def cmd_fuse(client, args):
     if (len(args) < 2):
         print('USAGE: fuse <"Card Name"|id> [in-deck]')
@@ -904,6 +912,9 @@ def cmd_fuse(client, args):
         if (c_id is None):
             print(f'No such card: name "{args[1]}"')
             return
+
+    in_deck = ('in-deck' in args)
+
     def up_or_fuse(target_cid: int, dep_list: List[int]):
         target = id_to_cards[target_cid]
         #print(f'DEBUG: up-or-fuse [{target_cid}] {target["full_name"]}')
@@ -918,10 +929,10 @@ def cmd_fuse(client, args):
                     return None
                 if (int(client.lastUserCards[sxid]['num_owned'] or 0) < 1):
                     return None
-                print(f'Upgrade card: [{x_id}] => [{target_cid}] {target["full_name"]}')
-                rsp = client.upgradeCard(x_id)
+                print(f'Upgrade card: {_cn(x_id)} => {_cn(target_cid)}')
+                rsp = client.upgradeCard(x_id, in_deck = in_deck)
                 if (not rsp):
-                    print(f'ERROR: failed to upgrade card id {x_id}')
+                    print(f'ERROR: failed to upgrade {_cn(x_id)}')
                     return None
                 print('SP: {}'.format(rsp['user_data']['salvage']))
                 return x_id
@@ -937,11 +948,11 @@ def cmd_fuse(client, args):
         # it's 1st level, check fusion receipt
         else:
             if (not is_neocyte_dual) and (target['low_id'] != target_cid):
-                print(f'ERROR: DB: is not low level id: [{target_cid}] {target["full_name"]}')
+                print(f'ERROR: DB: is not low level id: {_cn(target_cid)}')
                 return None
             from_cards = fusion_from_cards.get(target_cid, None)
             if (not from_cards):
-                print(f'ERROR: No owned card [{target_cid}] {target["full_name"]}')
+                print(f'ERROR: No owned card {_cn(target_cid)}')
                 return None
             from_cids = []
             for d_id, count in from_cards.items():
@@ -957,7 +968,7 @@ def cmd_fuse(client, args):
                     if (prev_xcnt == xcnt):
                         print(f'ERROR: num owned is not changed for {sdid}')
                         return None
-            print(f'Fuse card: {from_cids} => [{target_cid}] {target["full_name"]}')
+            print(f'Fuse card: {from_cids} => {_cn(target_cid)}')
             rsp = client.fuseCard(target_cid)
             return target_cid
     up_or_fuse(c_id, [c_id])
@@ -996,13 +1007,25 @@ def cmd_deck(client, args):
             print(f'ERROR: unknown card name: {cname}')
             return
         cid = card['id']
-        if (commander_id is None):
+        if (1000 <= cid < 2000) or (25000 <= cid < 30000):
+            if (commander_id is not None):
+                print(f'ERROR: commander #1 [{commander_id}] vs #2 [{cid}]')
+                return
+            if (qnt != 1):
+                print(f'ERROR: commander cannot have a quantifier (unless it''s 1)')
+                return
             commander_id = cid
-        elif (dominion_id is None) and (cname.startswith('Alpha ') or cname.endswith(' Nexus')):
+        elif (50000 < cid <= 55000):
+            if (dominion_id is not None):
+                print(f'ERROR: dominion #1 [{dominion_id}] vs #2 [{cid}]')
+                return
+            if (qnt != 1):
+                print(f'ERROR: dominion cannot have a quantifier (unless it''s 1)')
+                return
             dominion_id = cid
         else:
             card_ids += [cid,] * qnt
-    rsp = client.setDeckCards(deck_id, dominion_id, commander_id, card_ids)
+    rsp = client.setDeckCards(deck_id, (dominion_id or 0), (commander_id or 0), card_ids)
     if (not rsp):
         print(f'ERROR: failed to set deck cards')
     return
@@ -1017,7 +1040,7 @@ def cmd_salvage(client, args):
             rsp = client.salvageCard(cid)
             if (not rsp):
                 card = id_to_cards[cid]
-                print(f'ERROR: failed to salvage [{cid}] {card["full_name"]}')
+                print(f'ERROR: failed to salvage {_cn(cid)}')
                 break
             last_rsp = rsp
         if (last_rsp):
@@ -1063,7 +1086,7 @@ def cmd_buyback(client, args):
     rsp = client.buybackCard(cid, count)
     if (not rsp):
         card = id_to_cards.get(cid, None)
-        print(f'ERROR: failed to buyback [{cid}] {card and card["full_name"] or "(???)"}')
+        print(f'ERROR: failed to buyback {_cn(cid)}')
         return
     print('SP: {}'.format(rsp['user_data']['salvage']))
     return
