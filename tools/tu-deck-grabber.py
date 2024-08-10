@@ -539,8 +539,11 @@ class TUApiClient:
             self.__enrich_last_data(resp)
             if (check_result):
                 rslt = resp.get('result', None)
+                rmsg = resp.get('result_message') or []
                 if (not rslt):
                     print(f'ERROR: {method_name}: {rslt is None and "no" or "negative"} result')
+                    for i in range(len(rmsg)):
+                        print(f' /!\\ *** \x1b[41;37;1m{rmsg[i]}\x1b[0m *** /!\\')
                     return None
             return resp
         print(f'ERROR: {method_name}: no data (all tries are spent)')
@@ -655,6 +658,12 @@ class TUApiClient:
         rd = self.__mkRequestData('setDeckDominion', {
             'deck_id': str(deck_id),
             'dominion_id': str(dominion_id),
+        })
+        return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
+
+    def respecDominionCard(self, card_id: int):
+        rd = self.__mkRequestData('respecDominionCard', {
+            'card_id': str(card_id),
         })
         return self.__run_api_req_with_retries(rd.getUrlParamMessage(), rd)
 
@@ -893,33 +902,37 @@ atexit.register(readline.write_history_file, histfile)
 
 _cn = getCardNameByIdWithIdPrefix
 
+def _find_cards_generator(name_or_regex: str, extra_predicate = None):
+    if re.match(r'^/.+/$', name_or_regex):
+        pattern_regex = re.compile(name_or_regex[1:-1])
+        pattern_pred = lambda c: pattern_regex.match(c['full_name']) and c['maxed']
+    else:
+        pattern_pred = lambda c: c['full_name'] == name_or_regex
+    if (extra_predicate is not None):
+        old_pred = pattern_pred
+        pattern_pred = lambda c: old_pred(c) and extra_predicate(c)
+    for c_id, c in id_to_cards.items():
+        if pattern_pred(c):
+            yield (c_id, c)
+    return
+
 def cmd_fuse(client, args):
     if (len(args) < 2):
         print('USAGE: fuse <"Card Name"|id> [in-deck]')
         return
-    c_id = None
-    if re.match(r'^\d+$', args[1]):
-        c_id = int(args[1])
-        if (c_id not in id_to_cards):
-            print(f'No such card: id={args[1]}')
-            return
-    else:
-        pattern_pred = lambda c: c['full_name'] == args[1]
-        for xid, c in id_to_cards.items():
-            if pattern_pred(c):
-                c_id = xid
-                break
-        if (c_id is None):
-            print(f'No such card: name "{args[1]}"')
-            return
-
+    g = _find_cards_generator(args[1]) # find cards by name or /regex/
+    c_id, c = next(g, (None, None))
+    if (c_id is None):
+        print(f'No such card: name "{args[1]}"')
+        return
+    if (c_id not in id_to_cards):
+        print(f'No such card: id={args[1]}')
+        return
     in_deck = ('in-deck' in args)
-
     def up_or_fuse(target_cid: int, dep_list: List[int]):
         target = id_to_cards[target_cid]
         #print(f'DEBUG: up-or-fuse [{target_cid}] {target["full_name"]}')
         is_neocyte_dual = (target_cid == 42745)
-
         # is target non-1st level card?
         if (not is_neocyte_dual) and ('prev_id' in target):
             p_id = target['prev_id']
@@ -944,7 +957,6 @@ def cmd_fuse(client, args):
                 return p_id
             print(f'WARN: not enough resources to build {target["full_name"]} (deps: {dep_list})')
             return None
-
         # it's 1st level, check fusion receipt
         else:
             if (not is_neocyte_dual) and (target['low_id'] != target_cid):
@@ -1028,6 +1040,35 @@ def cmd_deck(client, args):
     rsp = client.setDeckCards(deck_id, (dominion_id or 0), (commander_id or 0), card_ids)
     if (not rsp):
         print(f'ERROR: failed to set deck cards')
+    return
+
+def cmd_dom(client, args):
+    if (len(args) < 3) or (args[1] != 'respec'):
+        print('USAGE: dom respec <CARD_ID|alpha|nexus>')
+        return
+    card_value = args[2].lower()
+    def _owned_pred(card):
+        sxid = str(card['id'])
+        return (sxid in client.lastUserCards) \
+            and (int(client.lastUserCards[sxid]['num_owned'] or 0) > 0)
+    card_id, g = None, None
+    if (card_value == 'alpha'):
+        g = _find_cards_generator(r'/^Alpha .*/', _owned_pred)
+    elif (card_value == 'nexus'):
+        g = _find_cards_generator(r'/.* Nexus$/', _owned_pred)
+    elif re.match(r'^\d+$', card_value):
+        card_id = int(card_value)
+    else:
+        # no owned predicate used: user MUST know what he should have exactly
+        g = _find_cards_generator(card_value)
+    if (g is not None):
+        card_id, card = next(g, (None, None))
+    if (card_id is None):
+        print(f'ERROR: unable to resolve card: {card_value}')
+        return
+    rsp = client.respecDominionCard(card_id)
+    if (not rsp):
+        print(f'ERROR: failed to respec dominion')
     return
 
 def cmd_salvage(client, args):
@@ -1170,14 +1211,8 @@ def cmd_card(client, args):
             return
         showCard(id_to_cards[c_id])
     else:
-        if re.match(r'^/.+/$', args[1]):
-            pattern_regex = re.compile(args[1][1:-1])
-            pattern_pred = lambda c: pattern_regex.match(c['full_name']) and c['maxed']
-        else:
-            pattern_pred = lambda c: c['full_name'] == args[1]
-        for c in id_to_cards.values():
-            if pattern_pred(c):
-                showCard(c)
+        for c_id, c in _find_cards_generator(args[1]): # find cards by name or /regex/
+            showCard(c)
     return
 
 def cmd_dump(client, args):
@@ -1289,11 +1324,13 @@ with PoolManager(1,
                 cmd_dump(client, args)
             elif (args[0] == 'deck'):
                 cmd_deck(client, args)
+            elif (args[0] == 'dom'):
+                cmd_dom(client, args)
             else:
                 print(
                     f'ERROR: unknown command: {line} (supported: '
                     f'[ init | grab | hunt | fuse | salvage | buyback | buy20 '
-                    f'| card | dump | deck | exit/quit ])')
+                    f'| card | dump | deck | dom | exit/quit ])')
         except Exception as e:
             print(f'ERROR: failed processing command {args[0]}: {e}')
             import traceback
