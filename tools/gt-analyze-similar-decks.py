@@ -70,7 +70,8 @@ class Deck:
                 cmd_points = 0.95
         dom_points = 1.0
         if with_dominion:
-            if self.dominion.name != that.dominion.name:
+            _dname = lambda host: host.dominion and host.dominion.name or None
+            if _dname(self) != _dname(that):
                 dom_points = 0.9
         max_cards_len = max(self.cardsCount(), that.cardsCount())
         common_cards = 0
