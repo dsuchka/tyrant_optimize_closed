@@ -636,7 +636,7 @@ class TUApiClient:
             dominion_id: int,
             commander_id: int,
             card_ids: List[int],
-            active: bool = True
+            active: bool = False
         ):
         card_map = {}
         for cid in card_ids:
@@ -692,10 +692,12 @@ class TUApiClient:
             dom_id = _get_attr(deck, 'dominion_id', typ=int)
             if dom_id:
                 deck_txt += ', ' + card_id2name_resolver(dom_id)
-            for card_id, card_count in deck['cards'].items():
-                deck_txt += ', ' + card_id2name_resolver(int(card_id))
-                if int(card_count) > 1:
-                    deck_txt += ' #' + str(card_count)
+            deck_cards = deck.get('cards', {})
+            if deck_cards:
+                for card_id, card_count in deck_cards.items():
+                    deck_txt += ', ' + card_id2name_resolver(int(card_id))
+                    if int(card_count) > 1:
+                        deck_txt += ' #' + str(card_count)
             txt += '{}.deck_{}: {}\n'.format(self.getUserName(), deck_id, deck_txt)
         txt += '\n// End of decks dump\n'
         return txt
