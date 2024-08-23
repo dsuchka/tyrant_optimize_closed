@@ -1009,11 +1009,15 @@ struct PlayCard
 
             }
             //Devotion BGE
-            if (__builtin_expect(fd->bg_effects[status->m_player][PassiveBGE::devotion], false) && !summoned && card->m_category == CardCategory::normal && fd->players[status->m_player]->commander.m_card->m_faction == card->m_faction)
+            if (__builtin_expect(fd->bg_effects[status->m_player][PassiveBGE::devotion], false)
+                    && !summoned && card->m_category == CardCategory::normal
+                    && fd->players[status->m_player]->commander.m_card->m_faction == card->m_faction)
             {
+                unsigned devotion_percent = fd->bg_effects[status->m_player][PassiveBGE::devotion];
+                unsigned bge_buff = (card->m_health*devotion_percent+99)/100;
                 _DEBUG_MSG(1, "Devotion %s: Gains %u HP\n",
-                        status_description(status).c_str(), (2*card->m_health+4)/5);
-                status->ext_hp((2*card->m_health+4)/5); //40% bonus health (rounded up)
+                        status_description(status).c_str(), bge_buff);
+                status->ext_hp(bge_buff); // <bge_value>% bonus health (rounded up)
             }
 
 
