@@ -8,7 +8,6 @@ import pickle
 import urllib
 import urllib3
 import json
-import readline
 import atexit
 import certifi
 import configparser
@@ -24,6 +23,7 @@ from urllib3.util.timeout import Timeout
 from urllib3 import PoolManager, Retry
 
 XML_DIR = '~/3pp/tyrant_optimize/data/'
+TMP_DIR = '~' if sys.platform == 'win32' else '/tmp'
 
 DEFAULT_USER_DB_PATH = '~/.tu-deck-grabber.udb'
 DEFAULT_CONFIG_PATH = '~/.tu-deck-grabber.ini'
@@ -263,7 +263,7 @@ while os.path.exists(xml_fname):
     xml_file_hash = int(st.st_mtime * 0x1b1 + st.st_size) & 0xFFFFFFFF
     print('INFO: fusion recipes xml file: {} (hash: 0x{:08x})'.format(xml_fname, xml_file_hash))
 
-    dump_fname = re.sub('\.xml$', '.pck', xml_fname)
+    dump_fname = re.sub(r'\.xml$', '.pck', xml_fname)
     if os.path.exists(dump_fname):
         with open(dump_fname, 'rb') as f:
             xmagic = pickle.load(f)
@@ -321,7 +321,7 @@ for i in range(1, 100):
     xml_file_hash = int(((st.st_mtime * 31) + i) * 31 + st.st_size) & 0xFFFFFFFF
     print('INFO: next cards xml file: {} (hash: 0x{:08x})'.format(xml_fname, xml_file_hash))
 
-    dump_fname = re.sub('\.xml$', '.pck', xml_fname)
+    dump_fname = re.sub(r'\.xml$', '.pck', xml_fname)
     if os.path.exists(dump_fname):
         with open(dump_fname, 'rb') as f:
             xmagic = pickle.load(f)
@@ -529,8 +529,13 @@ class TUApiClient:
             if not data:
                 print('WARN: {}: no data (try #{})'.format(method_name, try_no))
                 continue
-            prev_name, last_name = ['/tmp/.tu-deck-grabber.{}.{}'.format(method_name, x) for x in ('prev', 'last')]
+            tmp_dir = os.path.expanduser(TMP_DIR)
+            prev_name, last_name = [
+                '{}/.tu-deck-grabber.{}.{}'.format(tmp_dir, method_name, x)
+                    for x in ('prev', 'last')]
             if os.path.exists(last_name):
+                if os.path.exists(prev_name):
+                    os.unlink(prev_name)
                 os.rename(last_name, prev_name)
             with open(last_name, 'wb') as f:
                 f.write(bytes(data, 'UTF-8'))
@@ -862,8 +867,8 @@ def doGrabLastDeck(client):
     if config.getboolean('CORE', 'output_eds'):
         out += 'eds{:02d}.'.format(enemy_size)
     if config.getboolean('CORE', 'output_guild'):
-        out += re.sub('(?a)[^\w]', '_', enemy_guild_name) + '.'
-    out += re.sub('(?a)[^\w]', '_', enemy_name)
+        out += re.sub(r'(?a)[^\w]', '_', enemy_guild_name) + '.'
+    out += re.sub(r'(?a)[^\w]', '_', enemy_name)
     if config.getboolean('CORE', 'output_missing'):
         missing_cards = enemy_size - enemy_played_cards_count
         if (missing_cards > 0):
@@ -890,12 +895,21 @@ def doGrabLastDeck(client):
     print('Grabbed deck: ' + out)
 
 ## configure readline
+
+_win32 = False
+if sys.platform == 'win32':
+    _win32 = True
+    import pyreadline3 as readline
+else:
+    import readline
+
 histfile = os.path.join(os.path.expanduser('~'), '.tu_deck_grabber_history')
 if os.path.exists(histfile):
     readline.read_history_file(histfile)
-readline.set_history_length(1000)
-readline.read_init_file()
-atexit.register(readline.write_history_file, histfile)
+if not _win32:
+    readline.set_history_length(1000)
+    readline.read_init_file()
+    atexit.register(readline.write_history_file, histfile)
 
 
 ##
@@ -947,7 +961,7 @@ def cmd_fuse(client, args):
                 print(f'Upgrade card: {_cn(x_id)} => {_cn(target_cid)}')
                 rsp = client.upgradeCard(x_id, in_deck = in_deck)
                 if (not rsp):
-                    print(f'ERROR: failed to upgrade {_cn(x_id)}')
+                    print(f'ERROR: failed to upgrade {_cn(x_id)} (deps: {dep_list})')
                     return None
                 print('SP: {}'.format(rsp['user_data']['salvage']))
                 return x_id
@@ -962,11 +976,11 @@ def cmd_fuse(client, args):
         # it's 1st level, check fusion receipt
         else:
             if (not is_neocyte_dual) and (target['low_id'] != target_cid):
-                print(f'ERROR: DB: is not low level id: {_cn(target_cid)}')
+                print(f'ERROR: DB: is not low level id: {_cn(target_cid)} (deps: {dep_list})')
                 return None
             from_cards = fusion_from_cards.get(target_cid, None)
             if (not from_cards):
-                print(f'ERROR: No owned card {_cn(target_cid)}')
+                print(f'ERROR: No owned card {_cn(target_cid)} (deps: {dep_list})')
                 return None
             from_cids = []
             for d_id, count in from_cards.items():
@@ -980,7 +994,7 @@ def cmd_fuse(client, args):
                     prev_xcnt = xcnt
                     xcnt = int(client.lastUserCards[sdid]['num_owned'] or 0)
                     if (prev_xcnt == xcnt):
-                        print(f'ERROR: num owned is not changed for {sdid}')
+                        print(f'ERROR: num owned is not changed for {sdid} (deps: {dep_list})')
                         return None
             print(f'Fuse card: {from_cids} => {_cn(target_cid)}')
             rsp = client.fuseCard(target_cid)
@@ -1307,7 +1321,12 @@ with PoolManager(1,
                 break
             elif (args[0] == 'init'):
                 client.getUserAccount()
-                client.runInit()
+                ud = client.runInit()['user_data']
+                print(f' << player [{ud["name"]}] Lv. {ud["level"]} >>')
+                print(f' * Gold: {ud["money"]}')
+                print(f' * Energy: {ud["energy"]}')
+                print(f' * Stamina: {ud["stamina"]}')
+                print(f' * SP: {ud["salvage"]}')
             elif (args[0] == 'grab'):
                 doGrabLastDeck(client)
             elif (args[0] == 'hunt'):
