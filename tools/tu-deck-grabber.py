@@ -785,7 +785,7 @@ def doHuntAndEnrichUserDb(client):
         os.renames(tmp_udb_fname, udb_fname)
         print('INFO: user-db: synced to disk: {} (total {} entries)'.format(udb_fname, user_db.size()))
 
-def doGrabLastDeck(client):
+def doGrabLastDeck(client, *custom_suffix):
     global orig_res
     res = orig_res = client.getBattleResults()
     if (not res) or ('battle_data' not in res):
@@ -850,6 +850,7 @@ def doGrabLastDeck(client):
     # deck header
     enemy_guild_name = enemy_udb_entry and enemy_udb_entry.guild_name or '__UNKNOWN__'
     out = ''
+    fmt_name = lambda n: re.sub(r'(?a)[^\w]', '_', n)
     if config.getboolean('CORE', 'output_game_type'):
         out += game_type + '.'
     if config.getboolean('CORE', 'output_timestamp'):
@@ -867,12 +868,14 @@ def doGrabLastDeck(client):
     if config.getboolean('CORE', 'output_eds'):
         out += 'eds{:02d}.'.format(enemy_size)
     if config.getboolean('CORE', 'output_guild'):
-        out += re.sub(r'(?a)[^\w]', '_', enemy_guild_name) + '.'
-    out += re.sub(r'(?a)[^\w]', '_', enemy_name)
+        out += fmt_name(enemy_guild_name) + '.'
+    out += fmt_name(enemy_name)
     if config.getboolean('CORE', 'output_missing'):
         missing_cards = enemy_size - enemy_played_cards_count
         if (missing_cards > 0):
             out += '.m{}'.format(missing_cards)
+    if custom_suffix:
+        out += '.' + '.'.join(fmt_name(x) for x in custom_suffix)
     out += ': '
 
     # append commander
@@ -1328,7 +1331,7 @@ with PoolManager(1,
                 print(f' * Stamina: {ud["stamina"]}')
                 print(f' * SP: {ud["salvage"]}')
             elif (args[0] == 'grab'):
-                doGrabLastDeck(client)
+                doGrabLastDeck(client, *args[1:])
             elif (args[0] == 'hunt'):
                 doHuntAndEnrichUserDb(client)
             elif (args[0] == 'fuse'):
