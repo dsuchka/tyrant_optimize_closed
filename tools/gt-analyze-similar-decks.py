@@ -12,8 +12,8 @@ with_dominion = 'no-dominion' not in sys.argv[2:]
 
 # 96.4578  GW_GT_DEF_107: Battlemaster Krellus, Alpha Scimitar, Silv...
 # Arena.Guild.<:-(nick)*(name)-:>: Battlemaster Krellus, Alpha Scimitar, Silv...
-DECK_FMT = re.compile("^(?P<prefix>(?P<points>\s*[0-9.]+\s+)?(?P<deck_name>.+?): )(?P<cards>.*)$")
-CARD_FMT = re.compile("^(?P<name>.+?)(?P<level>-\d)?\s*(?:\s+#(?P<count>\d+))?$")
+DECK_FMT = re.compile(r"^(?P<prefix>(?P<points>\s*[0-9.]+\s+)?(?P<deck_name>.+?): )(?P<cards>.*)$")
+CARD_FMT = re.compile(r"^(?P<name>.+?)(?P<level>-\d)?\s*(?:\s+#(?P<count>\d+))?$")
 
 class NameCountType:
     CARD_TYPE_COMMANDER = 1
