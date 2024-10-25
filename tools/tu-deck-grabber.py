@@ -646,10 +646,13 @@ class TUApiClient:
         card_map = {}
         for cid in card_ids:
             card_map[cid] = card_map.get(cid, 0) + 1
-        card_map_texted = '{'
-        for k, v in card_map.items():
-            card_map_texted += f'"{k}":"{v}",'
-        card_map_texted = card_map_texted[:-1] + '}'
+        if card_map:
+            card_map_texted = '{'
+            for k, v in card_map.items():
+                card_map_texted += f'"{k}":"{v}",'
+            card_map_texted = card_map_texted[:-1] + '}'
+        else:
+            card_map_texted = '{}'
         rd = self.__mkRequestData('setDeckCards', {
             'deck_id': str(deck_id),
             'dominion_id': str(dominion_id),
