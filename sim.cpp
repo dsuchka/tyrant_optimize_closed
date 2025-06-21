@@ -1612,10 +1612,9 @@ struct PerformAttack
     template<enum CardType::CardType def_cardtype>
         unsigned op()
         {
-            unsigned pre_modifier_dmg = att_status->attack_power();
             // Bug fix? 2023-04-03 a card with zero attack power can not attack and won't trigger subdue
             // Confirmed subdue behaviour by MK 2023-07-12
-            if(pre_modifier_dmg == 0) { return 0; }
+            if(att_status->attack_power()== 0) { return 0; }
 
 
             if(__builtin_expect(def_status->has_skill(Skill::flying),false) && fd->flip()) {
@@ -1632,6 +1631,10 @@ struct PerformAttack
                     return 0; 
                 }
             }
+            
+            // APN Bug fix for subdue not reducing attack damage
+            // https://github.com/APN-Pucky/tyrant_optimize/issues/79
+            unsigned pre_modifier_dmg = att_status->attack_power();
 
             modify_attack_damage<def_cardtype>(pre_modifier_dmg);
 
@@ -1872,6 +1875,7 @@ struct PerformAttack
             {
                 if(!reduced_desc.empty()) { desc += "-[" + reduced_desc + "]"; }
                 if(!desc.empty()) { desc += "=" + tuo::to_string(att_dmg); }
+                else { assert(att_dmg == pre_modifier_dmg); }
                 _DEBUG_MSG(1, "%s attacks %s for %u%s damage\n",
                         status_description(att_status).c_str(),
                         status_description(def_status).c_str(), pre_modifier_dmg, desc.c_str());
