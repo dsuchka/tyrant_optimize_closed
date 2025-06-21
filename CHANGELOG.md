@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.2] - 2025-06-21
+
+### Fixed
+
+- Fixed bug in subdue, where the subdued-value was not subtracted from the first attack damage (#79)
+
 ## [6.5.2] - 2024-08-24
 
 ### Changed
