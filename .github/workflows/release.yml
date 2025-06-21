@@ -8,14 +8,23 @@ on:
 jobs:
   build:
     name: ubuntu
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:20.04  # Use older Ubuntu version
+    env:
+      DEBIAN_FRONTEND: noninteractive  # ✅ Set globally for all steps
 
     steps:
+      - name: Install Tools
+        run: |
+          apt-get update
+          apt-get install -y git sudo gnupg software-properties-common python3-pip
+          ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime
+          echo "Etc/UTC" > /etc/timezone
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Get tags from git
-        run: git fetch --prune --unshallow --tags
+          fetch-depth: 0
       # early release creation to adjust release notes acc. to changelog after pushing git tag
       - name: Create Release
         if: contains(github.ref, 'tags/v')
@@ -32,7 +41,7 @@ jobs:
       - run: "./build/windows/requirements.sh"
       - run: "./build/windows/build.sh"
       - run: ./update_xml.sh
-      - run: source build/windows/package.sh
+      - run: . build/windows/package.sh
       - name: Upload tuo
         uses: actions/upload-artifact@v4
         with:
