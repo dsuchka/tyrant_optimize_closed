@@ -842,8 +842,7 @@ struct PlayCard
         CardStatus* op(bool summoned)
         {
             setStorage<type>();
-            placeCard<type>();
-            status->m_summoned = summoned;
+            placeCard<type>(summoned);
 
             unsigned played_faction_mask(0);
             unsigned same_faction_cards_count(0);
@@ -1046,13 +1045,26 @@ struct PlayCard
         }
 
     template <enum CardType::CardType type>
-        void placeCard()
+        void placeCard(bool summoned)
         {
             status = &storage->add_back();
             status->set(card);
             status->m_index = storage->size() - 1;
             status->m_player = actor_index;
             status->m_field = fd;
+            status->m_summoned = summoned;
+
+            // reduce delay for summoned card by tower (structure) for normal (non-triggered) summon skill
+            if (summoned && __builtin_expect(fd->fixes[Fix::reduce_delay_summoned_by_tower], true)
+                && actor_status->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate
+                && actor_status->m_card->m_type == CardType::structure
+                && status->m_delay > 0)
+            {
+                --status->m_delay;
+
+                _DEBUG_MSG(1, "%s reduces its timer (as summoned by tower)\n", status_description(status).c_str());
+            }
+
 #ifndef NQUEST
             if (actor_index == 0)
             {
@@ -1341,7 +1353,10 @@ void turn_start_phase_update(Field*fd, CardStatus * status)
                 if (status->m_delay == 0)
                 {
                     check_and_perform_valor(fd, status);
-                    if(status->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate)check_and_perform_summon(fd, status);
+                    if (status->m_card->m_skill_trigger[Skill::summon] == Skill::Trigger::activate)
+                    {
+                        check_and_perform_summon(fd, status);
+                    }
                 }
             }
             else

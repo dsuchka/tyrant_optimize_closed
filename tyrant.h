@@ -35,6 +35,7 @@ enum Fix
     subdue_before_attack,
     corrosive_protect_armor,
     poison_after_attacked,
+    reduce_delay_summoned_by_tower,
     num_fixes
 };
 
