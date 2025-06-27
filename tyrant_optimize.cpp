@@ -3039,17 +3039,33 @@ DeckResults run(int argc, const char **argv)
         {
             fixes[Fix::enhance_early] = true;
         }
+        else if (strcmp(argv[argIndex], "no-fix-enhance-early") == 0)
+        {
+            fixes[Fix::enhance_early] = false;
+        }
         else if (strcmp(argv[argIndex], "fix-revenge-on-death") == 0)
         {
             fixes[Fix::revenge_on_death] = true;
+        }
+        else if (strcmp(argv[argIndex], "no-fix-revenge-on-death") == 0)
+        {
+            fixes[Fix::revenge_on_death] = false;
         }
         else if (strcmp(argv[argIndex], "fix-death-from-bge") == 0)
         {
             fixes[Fix::death_from_bge] = true;
         }
+        else if (strcmp(argv[argIndex], "no-fix-death-from-bge") == 0)
+        {
+            fixes[Fix::death_from_bge] = false;
+        }
         else if (strcmp(argv[argIndex], "fix-legion-under-megamorphosis") == 0)
         {
             fixes[Fix::legion_under_mega] = true;
+        }
+        else if (strcmp(argv[argIndex], "no-fix-legion-under-megamorphosis") == 0)
+        {
+            fixes[Fix::legion_under_mega] = false;
         }
         else if (strcmp(argv[argIndex], "update-barrier-each-turn") == 0)
 		{

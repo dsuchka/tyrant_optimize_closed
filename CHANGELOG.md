@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.2] - 2025-06-21
+
+### Fixed
+
+- Fixed bug in subdue, where the subdued-value was not subtracted from the first attack damage (#79)
+
+## [6.5.2] - 2024-08-24
+
+### Changed
+
+- Passive BGE Devotion is now parameterized, i.e. `Devotion X` (as percent). Note that just `Devotion` corresponds to `Devotion 1` different from the previous hard coded 40% (#78).
+
 ## [6.5.0] - 2024-03-15
 
 ### Added
