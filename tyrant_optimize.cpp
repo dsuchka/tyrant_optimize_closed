@@ -487,7 +487,7 @@ void init()
 	fixes[Fix::poison_after_attacked] = true;
 
 	fixes[Fix::corrosive_protect_armor] = true;
-  
+    fixes[Fix::reduce_delay_summoned_by_tower] = true;
   
     db_limit = -1;
     use_strict_db = true;
@@ -3123,6 +3123,14 @@ DeckResults run(int argc, const char **argv)
 		{
 			fixes[Fix::subdue_before_attack] = false;
 		}
+        else if (strcmp(argv[argIndex], "update-reduce-delay-summoned-by-tower") == 0)
+        {
+            fixes[Fix::reduce_delay_summoned_by_tower] = true;
+        }
+        else if (strcmp(argv[argIndex], "no-update-reduce-delay-summoned-by-tower") == 0)
+        {
+            fixes[Fix::reduce_delay_summoned_by_tower] = false;
+        }
         else if (strcmp(argv[argIndex], "seed") == 0)
         {
             if (check_input_amount(argc, argv, argIndex, 1))
