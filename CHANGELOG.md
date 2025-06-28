@@ -7,11 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Add fix of a bug where cards summoned by towers using non-triggered (i.e. on-death/play) summon skills appeared with 1 less delay than intended. (#86)
+
 ## [6.5.2] - 2025-06-21
 
 ### Fixed
 
-- Fixed bug in subdue, where the subdued-value was not subtracted from the first attack damage (#79)
+- Fixed bug in subdue, where the subdued-value was not subtracted from the first attack damage (#79).
 
 ## [6.5.2] - 2024-08-24
 
