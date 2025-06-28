@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [6.5.5] - 2025-06-28
+
 ### Fixed
 
 - Add fix of a bug where cards summoned by towers using non-triggered (i.e. on-death/play) summon skills appeared with 1 less delay than intended. (#86)
 
-## [6.5.2] - 2025-06-21
+## [6.5.4] - 2025-06-21
 
 ### Fixed
 
