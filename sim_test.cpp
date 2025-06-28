@@ -546,6 +546,42 @@ BOOST_AUTO_TEST_CASE(test_ml_scaling)
 BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE_END()
 
+// Define raw C-style arrays
+static const char* test_case_1[] = {
+    "tuo", "Bug86", "Bug86", "sim", "100", "seed", "100", "prefix", "tests/sim/",
+    "update-reduce-delay-summoned-by-tower", nullptr
+};
+
+static const char* test_case_2[] = {
+    "tuo", "Bug86", "Bug86", "sim", "100", "seed", "100", "prefix", "tests/sim/",
+    "no-update-reduce-delay-summoned-by-tower", nullptr
+};
+
+static const std::array<const char**, 2> argv_dataset = {
+    test_case_1,
+    test_case_2
+};
+BOOST_AUTO_TEST_SUITE(test_fixes)
+BOOST_AUTO_TEST_CASE(test_fixes_init)
+{
+    iter = 10000;
+    debug_print = 0;
+    debug_cached = 0;
+    debug_line = false;
+    eps = 1.; // only check for crashes now
+}
+BOOST_AUTO_TEST_SUITE(test_fixes_run)
+BOOST_DATA_TEST_CASE(test_fixes_run, bdata::make(test::argv_dataset),argv)
+{
+    // Convert vector to argv-style array
+    int argc = 0;
+    while (argv[argc] != nullptr) ++argc;
+    check_win(run_sim(argc, argv));
+    //check_win(run_sim(sizeof(argv) / sizeof(*argv), argv));
+}
+BOOST_AUTO_TEST_SUITE_END()
+BOOST_AUTO_TEST_SUITE_END()
+
 BOOST_AUTO_TEST_SUITE_END()
 #endif
 #endif

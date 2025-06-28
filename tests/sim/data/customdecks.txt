@@ -42,3 +42,9 @@ Bug67_1: Insurgent Malika,Alpha Retainer,Sulfuris Mine, Neocyte Spikes, Argent C
 
 Bug68: /^Bug68_\d+$/
 Bug68_1: Petrisis Gorefist, Calix the Clever#2, Remote Rig, Mausoleum Tenet
+
+Bug86: /^Bug86_\d+$/
+Bug86_1: Ulgor Nerve-splicer, Neo-Sarcophagus, Rhuthok's Hollow, Andar Arcology, Edenite Stronghold, Corilane's Opus, Accuser Settlement, Krisan Colonnade
+Bug86_2: Ulgor Nerve-splicer, Luth Broodreaver, Caverndweller, Rumexi Swarmer, Command Suit, Faithful Hospitaller, Krellus' Enslaver
+Bug86_3: Petrisis Gorefist,Rhuthok's Hollow, Andar Arcology,Faithful Hospitaller, Krellus' Enslaver
+Bug86_4: Insurgent Malika,Caverndweller, Rumexi Swarmer,Corilane's Opus, Accuser Settlement, Krisan Colonnade
