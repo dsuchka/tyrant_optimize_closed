@@ -24,7 +24,7 @@ jobs:
       run: |
         $compiler = "AHK\Compiler\Ahk2Exe.exe"
         $input = "SimpleTUOLiveSim.ahk"
-        $output = "SimpleTUOLiveSim.exe"
+        $output = "newSimpleTUOLiveSim.exe"
         & $compiler /in $input /out $output
       shell: powershell
 
@@ -32,7 +32,7 @@ jobs:
       run: |
         $compiler = "AHK\Compiler\Ahk2Exe.exe"
         $input = "SimpleTUOptimizeStarter.ahk"
-        $output = "SimpleTUOptimizeStarter.exe"
+        $output = "newSimpleTUOptimizeStarter.exe"
         & $compiler /in $input /out $output
       shell: powershell
 
@@ -40,10 +40,10 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: compiled-exe
-        path: SimpleTUOptimizeStarter.exe
+        path: newSimpleTUOptimizeStarter.exe
 
     - name: Upload compiled EXE
       uses: actions/upload-artifact@v4
       with:
         name: compiled-live-exe
-        path: SimpleTUOLiveSim.exe
+        path: newSimpleTUOLiveSim.exe
