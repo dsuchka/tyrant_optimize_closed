@@ -72,13 +72,13 @@ enum Skill
 
     // Defensive:
     armor, avenge, scavenge, corrosive, counter, evade, subdue, absorb, flying,
-    payback, revenge, tribute, refresh, wall, barrier,
+    payback, revenge, tribute, refresh, wall, barrier, poison,
 
     // Combat-Modifier:
-    coalition, legion, pierce, rupture, swipe, drain, venom, hunt,mark,
+    coalition, legion, pierce, rupture, swipe, drain, venom, hunt, mark,
 
     // Damage-Dependent:
-    berserk,  leech, poison,
+    berserk, leech,
 
     // Instant-Debuff:
     inhibit, sabotage, disease,
