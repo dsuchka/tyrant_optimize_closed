@@ -72,13 +72,13 @@ enum Skill
 
     // Defensive:
     armor, avenge, scavenge, corrosive, counter, evade, subdue, absorb, flying,
-    payback, revenge, tribute, refresh, wall, barrier,
+    payback, revenge, tribute, refresh, wall, barrier, poison,
 
     // Combat-Modifier:
-    coalition, legion, pierce, rupture, swipe, drain, venom, hunt,mark,
+    coalition, legion, pierce, rupture, swipe, drain, venom, hunt, mark,
 
     // Damage-Dependent:
-    berserk,  leech, poison,
+    berserk, leech,
 
     // Instant-Debuff:
     inhibit, sabotage, disease,
@@ -226,6 +226,7 @@ inline bool is_defensive_skill(Skill::Skill skill_id)
     case Skill::tribute:
     case Skill::refresh:
     case Skill::wall:
+    case Skill::poison:
         return true;
     default:
         return false;
@@ -270,7 +271,6 @@ inline bool is_damage_dependent_skill(Skill::Skill skill_id)
     {
     case Skill::berserk:
     case Skill::leech:
-    case Skill::poison:
         return true;
     default:
         return false;
