@@ -226,6 +226,7 @@ inline bool is_defensive_skill(Skill::Skill skill_id)
     case Skill::tribute:
     case Skill::refresh:
     case Skill::wall:
+    case Skill::barrier:
     case Skill::poison:
         return true;
     default:
