@@ -28,7 +28,7 @@ const std::string skill_names[Skill::num_skills] =
     // Combat-Modifier:
     "Coalition", "Legion", "Pierce", "Rupture", "Swipe", "Drain", "Venom", "Hunt", "Mark",
 
-    // Damage-Dependant:
+    // Damage-Dependent:
     "Berserk", "Leech",
 
     // Instant-Debuff:
